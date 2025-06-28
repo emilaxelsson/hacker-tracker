@@ -88,7 +88,7 @@ getConfig [config] = case config of
 getSectionPatterns :: [((MD.PosInfo, Text), [MD.Node])] -> Either LocatedError [Pattern]
 getSectionPatterns [] = return []
 getSectionPatterns (((pos@MD.PosInfo{startLine}, patternTitle), nodes) : ss) = do
-    (config, patternNodes) <- case nodes of
+    (_config, _patternNodes) <- case nodes of
         [c, p] -> return (c, p)
         _ ->
             Left
@@ -97,7 +97,7 @@ getSectionPatterns (((pos@MD.PosInfo{startLine}, patternTitle), nodes) : ss) = d
                     <> show (length nodes)
                     <> " nodes."
                 )
-    let resolution = 2
+    let resolution = 2 :: Int
     let rows = []
     let pattern =
             Pattern
