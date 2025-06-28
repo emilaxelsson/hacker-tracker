@@ -50,6 +50,7 @@ library
 
     exposed-modules:
         Oops
+        Player
         Track.Parser
         Track.Types
         Utils
@@ -58,8 +59,10 @@ library
         base < 5,
         cmark,
         protolude,
+        RtMidi,
         text,
         unordered-containers,
+        vector,
 
 executable hacker-tracker
     import:           warnings
