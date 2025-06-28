@@ -1,0 +1,29 @@
+{
+    // See https://go.microsoft.com/fwlink/?LinkId=733558
+    // for the documentation about the tasks.json format
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Format all Haskell files",
+            "type": "shell",
+            "command": "stack exec -- fourmolu -i ${workspaceFolder}",
+            "presentation": {
+                "reveal": "never"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Format current Haskell file",
+            "type": "shell",
+            "command": "stack exec -- fourmolu -i ${file}",
+            "presentation": {
+                "reveal": "never"
+            },
+            "problemMatcher": [],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        }
+    ]
+}

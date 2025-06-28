@@ -1,0 +1,79 @@
+cabal-version:      3.0
+name:               hacker-tracker
+version:            0.1
+synopsis:           Musical tracker for the hacker
+-- description:
+license:            BSD-3-Clause
+license-file:       LICENSE
+author:             Emil Axelsson
+maintainer:         78emil@gmail.com
+copyright:          Copyright (c) 2025, Emil Axelsson
+category:           Sound
+build-type:         Simple
+
+common extensions
+    default-extensions:
+        DeriveAnyClass
+        DerivingStrategies
+        DerivingVia
+        DuplicateRecordFields
+        GeneralizedNewtypeDeriving
+        ImportQualifiedPost
+        LambdaCase
+        NamedFieldPuns
+        NoImplicitPrelude
+        OverloadedLabels
+        OverloadedStrings
+        TupleSections
+        TypeApplications
+        TypeFamilies
+
+common warnings
+    ghc-options:
+        -Weverything
+        -Wno-all-missed-specialisations
+        -Wno-implicit-prelude
+        -Wno-missing-export-lists
+        -Wno-missing-import-lists
+        -Wno-missing-kind-signatures
+        -Wno-missing-local-signatures
+        -Wno-missing-role-annotations
+        -Wno-missing-safe-haskell-mode
+        -Wno-safe
+        -Wno-unsafe
+
+library
+    import:           warnings
+    import:           extensions
+    hs-source-dirs:   lib
+
+    exposed-modules:
+        Oops
+        Parser
+        Types
+        Utils
+
+    build-depends:
+        base < 5,
+        cmark,
+        protolude,
+        RtMidi,
+        text,
+        unordered-containers,
+        vector,
+
+    default-language: Haskell2010
+    -- other-extensions:
+
+executable hacker-tracker
+    import:           warnings
+    import:           extensions
+    hs-source-dirs:   app
+    main-is:          Main.hs
+    ghc-options:      -Werror
+
+    build-depends:    hacker-tracker,
+                      protolude,
+
+    default-language: Haskell2010
+    -- other-extensions:
