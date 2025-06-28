@@ -1,9 +1,9 @@
 module Main where
 
-import Parser (parseSong)
 import Protolude
+import Track.Parser (parseTrack)
 
 main :: IO ()
 main = do
-    song <- readFile "seq.md"
-    print $ parseSong song
+    track <- readFile "examples/test.md"
+    print $ parseTrack track

@@ -1,5 +1,5 @@
-module Types
-    ( module Types
+module Track.Types
+    ( module Track.Types
     ) where
 
 import Data.HashMap.Strict (HashMap)
@@ -47,14 +47,14 @@ data Section = Section
     }
     deriving stock (Show)
 
-data SongConfig = SongConfig
+data TrackConfig = TrackConfig
     { bpm :: Int
     , instruments :: HashMap InstrumentAcr InstrumentTarget
     }
     deriving stock (Show)
 
-data Song = Song
-    { config :: SongConfig
+data Track = Track
+    { config :: TrackConfig
     , sections :: [Section]
     }
     deriving stock (Show)

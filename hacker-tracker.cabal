@@ -49,8 +49,8 @@ library
 
     exposed-modules:
         Oops
-        Parser
-        Types
+        Track.Parser
+        Track.Types
         Utils
 
     build-depends:
