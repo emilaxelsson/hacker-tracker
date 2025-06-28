@@ -12,6 +12,7 @@ category:           Sound
 build-type:         Simple
 
 common extensions
+    default-language: Haskell2010
     default-extensions:
         DeriveAnyClass
         DerivingStrategies
@@ -60,9 +61,6 @@ library
         text,
         unordered-containers,
 
-    default-language: Haskell2010
-    -- other-extensions:
-
 executable hacker-tracker
     import:           warnings
     import:           extensions
@@ -72,6 +70,3 @@ executable hacker-tracker
 
     build-depends:    hacker-tracker,
                       protolude,
-
-    default-language: Haskell2010
-    -- other-extensions:
