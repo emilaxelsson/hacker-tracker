@@ -70,3 +70,16 @@ executable hacker-tracker
 
     build-depends:    hacker-tracker,
                       protolude,
+
+test-suite tests
+    import:           warnings
+    import:           extensions
+    type:             exitcode-stdio-1.0
+    hs-source-dirs:   tests
+    main-is:          Spec.hs
+
+    other-modules:    ParserSpec
+
+    build-depends:    hacker-tracker,
+                      hspec,
+                      protolude,
