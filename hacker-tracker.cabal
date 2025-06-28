@@ -24,6 +24,7 @@ common extensions
         LambdaCase
         NamedFieldPuns
         NoImplicitPrelude
+        NumericUnderscores
         OverloadedLabels
         OverloadedStrings
         ScopedTypeVariables
@@ -52,6 +53,10 @@ library
 
     exposed-modules:
         Oops
+        Synch.RefStore
+        Synch.System
+        Synch
+        Time
         Track.Parser
         Track.Types
         TUI
@@ -63,6 +68,7 @@ library
         cmark,
         protolude,
         text,
+        time,
         unordered-containers,
         vty,
         vty-unix,
