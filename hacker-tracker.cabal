@@ -18,6 +18,7 @@ common extensions
         DerivingStrategies
         DerivingVia
         DuplicateRecordFields
+        ExplicitForAll
         GeneralizedNewtypeDeriving
         ImportQualifiedPost
         LambdaCase
@@ -25,6 +26,7 @@ common extensions
         NoImplicitPrelude
         OverloadedLabels
         OverloadedStrings
+        ScopedTypeVariables
         TupleSections
         TypeApplications
         TypeFamilies
@@ -52,23 +54,29 @@ library
         Oops
         Track.Parser
         Track.Types
+        TUI
         Utils
 
     build-depends:
         base < 5,
+        brick,
         cmark,
         protolude,
         text,
         unordered-containers,
+        vty,
+        vty-unix,
 
 executable hacker-tracker
     import:           warnings
     import:           extensions
     hs-source-dirs:   app
     main-is:          Main.hs
-    ghc-options:      -Werror
+    ghc-options:      -Werror -threaded
 
-    build-depends:    hacker-tracker,
+    build-depends:    base,
+                      brick,
+                      hacker-tracker,
                       protolude,
 
 test-suite tests
