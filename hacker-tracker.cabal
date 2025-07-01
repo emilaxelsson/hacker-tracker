@@ -93,7 +93,9 @@ test-suite tests
     main-is:          Spec.hs
 
     other-modules:    ParserSpec
+                      SynchSpec
 
-    build-depends:    hacker-tracker,
+    build-depends:    base,
+                      hacker-tracker,
                       hspec,
                       protolude,
