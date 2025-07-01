@@ -1,8 +1,10 @@
 module Synch.System
     ( System (..)
     , Control (start, stop)
+    , stubbornlyRunning
     , newControl
     , execSystem
+    , execSystemForever
     ) where
 
 import Data.Fixed (Fixed (..), Pico)
@@ -39,6 +41,13 @@ data Control = Control
     -- 'True'.
     }
 
+stubbornlyRunning :: Control
+stubbornlyRunning = Control
+    { start = return ()
+    , stop = return ()
+    , getPermissionToRun = return False
+    }
+
 newControl :: IO Control
 newControl = do
     sem <- newEmptyMVar
@@ -59,12 +68,12 @@ newControl = do
 picoToMillis :: Pico -> Int
 picoToMillis (MkFixed i) = fromInteger $ div i 1_000_000_000
 
--- | Run a system forever, discarding its results
+-- | Run a system for as long as it returns 'True'
 execSystem
     :: Int
     -- ^ Resolution (milliseconds per tick)
     -> Control
-    -> System IO ()
+    -> System IO Bool
     -> IO ()
 execSystem millisPerTick Control{getPermissionToRun} (System sys) = do
     next <- sys
@@ -72,24 +81,38 @@ execSystem millisPerTick Control{getPermissionToRun} (System sys) = do
     ticksRef <- newIORef (0 :: Int)
     startTimeRef <- newIORef =<< getCurrentTime
 
-    forever $ do
-        wasBlocked <- getPermissionToRun
-        when wasBlocked $ do
-            writeIORef ticksRef 0
-            writeIORef startTimeRef =<< getCurrentTime
+    let go False = return ()
+        go True = do
+            wasBlocked <- getPermissionToRun
+            when wasBlocked $ do
+                writeIORef ticksRef 0
+                writeIORef startTimeRef =<< getCurrentTime
 
-        numberOfTicks <- readIORef ticksRef
-        startTime <- readIORef startTimeRef
-        currentTime <- getCurrentTime
+            numberOfTicks <- readIORef ticksRef
+            startTime <- readIORef startTimeRef
+            currentTime <- getCurrentTime
 
-        let realElapsedMillis =
-                picoToMillis $ nominalDiffTimeToSeconds $ diffUTCTime currentTime startTime
-        let tickMillis = numberOfTicks * millisPerTick
-        let slack = tickMillis - realElapsedMillis
+            let realElapsedMillis =
+                    picoToMillis $ nominalDiffTimeToSeconds $ diffUTCTime currentTime startTime
+            let tickMillis = numberOfTicks * millisPerTick
+            let slack = tickMillis - realElapsedMillis
 
-        when (slack > 0) $ do
-            threadDelay (slack * 1000)
+            when (slack > 0) $ do
+                threadDelay (slack * 1000)
 
-        next
+            keepGoing <- next
 
-        modifyIORef' ticksRef (+ 1)
+            modifyIORef' ticksRef (+ 1)
+
+            go keepGoing
+
+    go True
+
+-- | Run a system indefinitely
+execSystemForever
+    :: Int
+    -- ^ Resolution (milliseconds per tick)
+    -> Control
+    -> System IO ()
+    -> IO ()
+execSystemForever millisPerTick control = execSystem millisPerTick control . fmap (const True)

@@ -6,7 +6,7 @@ import Brick.BChan (BChan, newBChan, writeBChan)
 import Data.Fixed (Fixed (MkFixed))
 import Protolude
 import Synch (SF (..), action, counter, everyN, runSF)
-import Synch.System (execSystem)
+import Synch.System (execSystemForever)
 import Synch.System qualified as System
 import TUI (AppEvent (..), PlayerCommand (..), trackerMain)
 import Time (prettyElapsedTime, secondsToElapsedTime)
@@ -41,7 +41,7 @@ main = do
 
     bracket
         ( forkIO $
-            execSystem playerMillisPerTick sysControl $
+            execSystemForever playerMillisPerTick sysControl $
                 runSF $
                     player eventChan
         )

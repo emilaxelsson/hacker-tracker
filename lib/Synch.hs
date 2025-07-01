@@ -10,6 +10,7 @@ module Synch
     , switch
     , switch_
     , action
+    , delay
     , counter
     , everyN
     ) where
