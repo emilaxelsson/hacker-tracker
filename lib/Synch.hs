@@ -112,12 +112,6 @@ counter = SF $ do
                 setRef cnt (c + 1)
         return c
 
-counter' :: (RefStore m, MonadFix m) => SF m Bool Int
-counter' = proc tick -> do
-    rec c <- arr (uncurry $ \t -> if t then succ else id) -< (tick, c')
-        c' <- delay 0 -< c
-    returnA -< c
-
 latch :: RefStore m => a -> SF m (Event a) a
 latch init = SF $ do
     r <- newRef init
