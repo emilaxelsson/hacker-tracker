@@ -3,11 +3,12 @@
 module Main where
 
 import Brick.BChan (BChan, newBChan, writeBChan)
+import Control.Arrow (returnA)
 import Data.Fixed (Fixed (MkFixed))
+import Data.IORef (IORef, newIORef, writeIORef)
 import Protolude
-import Synch (SF (..), action, counter, everyN, runSF)
+import Synch (SF (..), action, counter, everyN, refInput, runSF)
 import Synch.System (execSystemForever)
-import Synch.System qualified as System
 import TUI (AppEvent (..), PlayerCommand (..), trackerMain)
 import Time (prettyElapsedTime, secondsToElapsedTime)
 import Track.Parser (parseTrack)
@@ -26,24 +27,30 @@ reporter eventChan =
                             fromIntegral elapsedMillis
          in writeBChan eventChan $ NowPlaying elapsedPretty
 
-player :: BChan AppEvent -> SF IO () ()
-player eventChan = proc () -> do
-    c <- counter -< True
-    void (everyN 10 (reporter eventChan)) -< c
+player :: BChan AppEvent -> IORef Bool -> SF IO () ()
+player eventChan runningRef = proc () -> do
+    running <- refInput runningRef -< ()
+
+    if running
+        then do
+            c <- counter -< True
+            void (everyN 10 (reporter eventChan)) -< c
+        else do
+            returnA -< ()
 
 main :: IO ()
 main = do
     track <- readFile "tests/test-track.md"
     print $ parseTrack track
 
-    sysControl <- System.newControl
     eventChan <- newBChan 1
+    runningRef <- newIORef False
 
     bracket
         ( forkIO $
-            execSystemForever playerMillisPerTick sysControl $
+            execSystemForever playerMillisPerTick $
                 runSF $
-                    player eventChan
+                    player eventChan runningRef
         )
         killThread
         ( const $
@@ -51,8 +58,8 @@ main = do
                 trackerMain
                     eventChan
                     ( \case
-                        Start -> System.start sysControl
-                        Stop -> System.stop sysControl
+                        Start -> writeIORef runningRef True
+                        Stop -> writeIORef runningRef False
                     )
         )
 

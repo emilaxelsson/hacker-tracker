@@ -1,8 +1,8 @@
 module ParserSpec (spec) where
 
 import Protolude
-import Track.Parser (parseTrack)
 import Test.Hspec
+import Track.Parser (parseTrack)
 
 spec :: Spec
 spec = do

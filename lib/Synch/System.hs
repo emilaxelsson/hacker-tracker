@@ -1,14 +1,11 @@
 module Synch.System
     ( System (..)
-    , Control (start, stop)
-    , stubbornlyRunning
-    , newControl
     , execSystem
     , execSystemForever
     ) where
 
 import Data.Fixed (Fixed (..), Pico)
-import Data.IORef (modifyIORef', newIORef, readIORef, writeIORef)
+import Data.IORef (modifyIORef', newIORef, readIORef)
 import Data.Time.Clock (diffUTCTime, getCurrentTime, nominalDiffTimeToSeconds)
 import Protolude hiding (empty)
 
@@ -28,38 +25,6 @@ instance Monad m => Applicative (System m) where
         nexta <- inita
         return $ nextf <*> nexta
 
--- | System controls
-data Control = Control
-    { start :: IO ()
-    -- ^ Start the system
-    , stop :: IO ()
-    -- ^ Pause the system
-    , getPermissionToRun :: IO Bool
-    -- ^ Internal operation used to achieve system pause. When the system is running, this
-    -- operation should return immediately with with value 'False'. When the system is
-    -- paused this operation should block (for as long as the pause lasts) and then return
-    -- 'True'.
-    }
-
-stubbornlyRunning :: Control
-stubbornlyRunning = Control
-    { start = return ()
-    , stop = return ()
-    , getPermissionToRun = return False
-    }
-
-newControl :: IO Control
-newControl = do
-    sem <- newEmptyMVar
-    let start = void $ tryPutMVar sem ()
-    let stop = void $ tryTakeMVar sem
-    let getPermissionToRun = do
-            empty <- isEmptyMVar sem
-            readMVar sem
-            return empty
-
-    return Control{start, stop, getPermissionToRun}
-
 -- |
 -- >>> picoToMillis 0.001
 -- 1
@@ -72,24 +37,17 @@ picoToMillis (MkFixed i) = fromInteger $ div i 1_000_000_000
 execSystem
     :: Int
     -- ^ Resolution (milliseconds per tick)
-    -> Control
     -> System IO Bool
     -> IO ()
-execSystem millisPerTick Control{getPermissionToRun} (System sys) = do
+execSystem millisPerTick (System sys) = do
     next <- sys
 
     ticksRef <- newIORef (0 :: Int)
-    startTimeRef <- newIORef =<< getCurrentTime
+    startTime <- getCurrentTime
 
     let go False = return ()
         go True = do
-            wasBlocked <- getPermissionToRun
-            when wasBlocked $ do
-                writeIORef ticksRef 0
-                writeIORef startTimeRef =<< getCurrentTime
-
             numberOfTicks <- readIORef ticksRef
-            startTime <- readIORef startTimeRef
             currentTime <- getCurrentTime
 
             let realElapsedMillis =
@@ -112,7 +70,6 @@ execSystem millisPerTick Control{getPermissionToRun} (System sys) = do
 execSystemForever
     :: Int
     -- ^ Resolution (milliseconds per tick)
-    -> Control
     -> System IO ()
     -> IO ()
-execSystemForever millisPerTick control = execSystem millisPerTick control . fmap (const True)
+execSystemForever millisPerTick = execSystem millisPerTick . fmap (const True)

@@ -6,7 +6,7 @@ import Control.Arrow (returnA)
 import Protolude
 import Synch (SF, action, counter, runSF)
 import Synch.RefStore
-import Synch.System qualified as System
+import Synch.System (execSystem)
 import Test.Hspec
 
 spec :: Spec
@@ -19,7 +19,7 @@ spec = do
             let put1 c = void $ modifyRef r1 (c :)
             let put2 c = void $ modifyRef r2 (c :)
 
-            System.execSystem 10 System.stubbornlyRunning $
+            execSystem 10 $
                 runSF $
                     pingPong put1 put2
 

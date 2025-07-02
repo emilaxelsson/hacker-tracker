@@ -13,6 +13,7 @@ module Synch
     , delay
     , counter
     , everyN
+    , refInput
     ) where
 
 import Control.Arrow
@@ -125,7 +126,7 @@ latch init = SF $ do
         getRef r
 
 -- | Slow down a system by only ticking it every nth time
-everyN :: RefStore m => Int -> SF m a b -> SF m a (Maybe b)
+everyN :: RefStore m => Int -> SF m a b -> SF m a (Event b)
 everyN n _
     | n <= 0 = error $ "every: expected positive number, got " ++ show n
 everyN n (SF init) = SF $ do
@@ -140,3 +141,6 @@ everyN n (SF init) = SF $ do
             else do
                 setRef c (count + 1)
                 return Nothing
+
+refInput :: RefStore m => Ref m a -> SF m () a
+refInput = action . const . getRef
