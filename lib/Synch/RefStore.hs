@@ -5,6 +5,7 @@ module Synch.RefStore
 import Protolude
 
 import Data.IORef (IORef, modifyIORef', newIORef, readIORef, writeIORef)
+import Data.STRef (STRef, modifySTRef', newSTRef, readSTRef, writeSTRef)
 
 class Monad m => RefStore m where
     type Ref m :: Type -> Type
@@ -20,4 +21,13 @@ instance RefStore IO where
     setRef = writeIORef
     modifyRef r f = do
         modifyIORef' r f
+        getRef r
+
+instance RefStore (ST s) where
+    type Ref (ST s) = STRef s
+    newRef = newSTRef
+    getRef = readSTRef
+    setRef = writeSTRef
+    modifyRef r f = do
+        modifySTRef' r f
         getRef r

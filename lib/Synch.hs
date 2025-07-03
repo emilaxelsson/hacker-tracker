@@ -4,6 +4,7 @@
 module Synch
     ( SF (..)
     , runSF
+    , evalSF
     , stream
     , Event
     , never
@@ -54,11 +55,27 @@ instance Monad m => ArrowChoice (SF m) where
 instance (RefStore m, MonadFix m) => ArrowLoop (SF m) where
     loop (SF init) = SF $ loop <$> init
 
--- | Run a synchronous stream transformer
+-- | Run a synchronous stream transformer as a 'System'
 runSF :: Monad m => SF m () b -> System m b
 runSF (SF init) = System $ do
     f <- init
     return $ runKleisli f ()
+
+-- | Evaluate a synchronous stream transformer using lists as input and output
+evalSF :: forall a b. (forall m. RefStore m => SF m a b) -> [a] -> [b]
+evalSF sf input = runST m
+  where
+    m :: ST s [b]
+    m = do
+        let SF init = sf
+        next <- init
+
+        let go [] bs = return $ reverse bs
+            go (a : as) bs = do
+                b <- runKleisli next a
+                go as (b : bs)
+
+        go input []
 
 stream :: Monad m => (a -> m b) -> m (Kleisli m a b)
 stream = return . Kleisli

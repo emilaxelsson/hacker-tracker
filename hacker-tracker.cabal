@@ -27,6 +27,7 @@ common extensions
         NumericUnderscores
         OverloadedLabels
         OverloadedStrings
+        RankNTypes
         ScopedTypeVariables
         TupleSections
         TypeApplications
