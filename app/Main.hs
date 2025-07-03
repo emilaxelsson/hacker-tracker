@@ -3,11 +3,11 @@
 module Main where
 
 import Brick.BChan (BChan, newBChan, writeBChan)
-import Control.Arrow (returnA)
+import Control.Arrow (Arrow (arr), (>>>))
 import Data.Fixed (Fixed (MkFixed))
 import Data.IORef (IORef, newIORef, writeIORef)
 import Protolude
-import Synch (SF (..), action, counter, everyN, refInput, runSF)
+import Synch (SF (..), action, counter, everyN, latch, refInput, runSF, whenA)
 import Synch.System (execSystemForever)
 import TUI (AppEvent (..), PlayerCommand (..), trackerMain)
 import Time (prettyElapsedTime, secondsToElapsedTime)
@@ -16,27 +16,33 @@ import Track.Parser (parseTrack)
 playerMillisPerTick :: Int
 playerMillisPerTick = 15
 
-reporter :: BChan AppEvent -> SF IO Int ()
+reporter :: BChan AppEvent -> SF IO (Maybe Int) ()
 reporter eventChan =
-    action $ \ticks ->
-        let elapsedMillis = ticks * playerMillisPerTick
-            elapsedPretty =
-                prettyElapsedTime $
-                    secondsToElapsedTime $
-                        MkFixed $
-                            fromIntegral elapsedMillis
-         in writeBChan eventChan $ NowPlaying elapsedPretty
+    action $ \case
+        Nothing -> return ()
+        Just ticks ->
+            let elapsedMillis = ticks * playerMillisPerTick
+                elapsedPretty =
+                    prettyElapsedTime $
+                        secondsToElapsedTime $
+                            MkFixed $
+                                fromIntegral elapsedMillis
+             in writeBChan eventChan $ NowPlaying elapsedPretty
+
+player' :: SF IO () Int
+player' = arr (const True) >>> counter
+
+pausablePlayer :: IORef Bool -> SF IO () (Maybe Int)
+pausablePlayer runningRef =
+    whenA
+        (refInput runningRef)
+        (Just <$> player')
+        >>> latch Nothing
 
 player :: BChan AppEvent -> IORef Bool -> SF IO () ()
 player eventChan runningRef = proc () -> do
-    running <- refInput runningRef -< ()
-
-    if running
-        then do
-            c <- counter -< True
-            void (everyN 10 (reporter eventChan)) -< c
-        else do
-            returnA -< ()
+    pos <- pausablePlayer runningRef -< ()
+    void (everyN 10 (reporter eventChan)) -< pos
 
 main :: IO ()
 main = do

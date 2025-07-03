@@ -9,9 +9,11 @@ module Synch
     , never
     , switch
     , switch_
+    , whenA
     , action
     , delay
     , counter
+    , latch
     , everyN
     , refInput
     ) where
@@ -90,6 +92,13 @@ switch_ sf1 sf2 =
     switch
         (sf1 >>> second (arr guard))
         (const sf2)
+
+whenA :: Monad m => SF m () Bool -> SF m a b -> SF m a (Event b)
+whenA cond sf = proc a -> do
+    c <- cond -< ()
+    if c
+        then (Just <$> sf) -< a
+        else returnA -< Nothing
 
 action :: Monad m => (a -> m b) -> SF m a b
 action = SF . return . Kleisli
