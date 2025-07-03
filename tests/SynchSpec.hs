@@ -1,10 +1,11 @@
 {-# LANGUAGE Arrows #-}
+{-# LANGUAGE RankNTypes #-}
 
 module SynchSpec (spec) where
 
 import Control.Arrow (returnA)
 import Protolude
-import Synch (SF, action, counter, runSF)
+import Synch (SF, action, counter, evalSF, rangeCounter, runSF)
 import Synch.RefStore
 import Synch.System (execSystem)
 import Test.Hspec
@@ -28,6 +29,11 @@ spec = do
 
             list1 `shouldBe` [4, 5, 6, 7, 12, 13, 14, 15]
             list2 `shouldBe` [0, 1, 2, 3, 8, 9, 10, 11, 16, 17, 18, 19]
+
+    describe "rangeCounter" $ do
+        it "counts incrementally from low to high" $ do
+            evalSF (rangeCounter 3 11) (replicate 12 ())
+                `shouldBe` [3, 4, 5, 6, 7, 8, 9, 10, 11, 3, 4, 5]
 
 pingPong :: (Int -> IO ()) -> (Int -> IO ()) -> SF IO () Bool
 pingPong put1 put2 = proc () -> do

@@ -14,6 +14,7 @@ module Synch
     , action
     , delay
     , counter
+    , rangeCounter
     , latch
     , everyN
     , refInput
@@ -137,6 +138,19 @@ counter = SF $ do
             void $
                 setRef cnt (c + 1)
         return c
+
+rangeCounter :: RefStore m => Int -> Int -> SF m () Int
+rangeCounter low high
+    | low > high = error $ "rangeCounter: invalid range " ++ show (low, high)
+    | otherwise = SF $ do
+        cnt <- newRef low
+        stream $ const $ do
+            c <- getRef cnt
+            void $
+                if c == high
+                    then setRef cnt low
+                    else setRef cnt (c + 1)
+            return c
 
 latch :: RefStore m => a -> SF m (Event a) a
 latch init = SF $ do
