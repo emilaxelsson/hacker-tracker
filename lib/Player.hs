@@ -11,11 +11,12 @@ import Protolude
 import Synch (Event, SF (..), action, counter, everyN, latch)
 import TUI (AppEvent (..))
 import Time (prettyElapsedTime, secondsToElapsedTime)
+import Synch.RefStore (RefStore)
 
 playerMillisPerTick :: Int
 playerMillisPerTick = 15
 
-reporter :: SF IO (Maybe Int) (Event AppEvent)
+reporter :: Monad m => SF m (Maybe Int) (Event AppEvent)
 reporter =
     action $ \case
         Nothing -> return Nothing
@@ -28,17 +29,17 @@ reporter =
                                 fromIntegral elapsedMillis
              in return $ Just $ NowPlaying elapsedPretty
 
-player' :: SF IO () Int
+player' :: RefStore m => SF m () Int
 player' = arr (const True) >>> counter
 
-pausablePlayer :: SF IO Bool (Maybe Int)
+pausablePlayer :: RefStore m => SF m Bool (Maybe Int)
 pausablePlayer = proc running -> do
     ticks <- if running
         then (Just . Just <$> player') -< ()
         else arr (const Nothing) -< ()
     latch Nothing -< ticks
 
-player :: SF IO (Event AppEvent) () -> SF IO () Bool -> SF IO () ()
+player :: RefStore m => SF m (Event AppEvent) () -> SF m () Bool -> SF m () ()
 player sinkAppEvent isRunning = proc () -> do
     pos <- pausablePlayer <<< isRunning -< ()
     void (everyN 10 (reporter >>> sinkAppEvent)) -< pos
