@@ -11,21 +11,30 @@ module Synch
     , never
     , switch
     , switch_
-    , whenA
     , action
     , delay
     , counter
     , rangeCounter
     , latch
+    , onChange
+    , positiveEdge
     , onEvent
+    , filterSF
     , everyN
     , refInput
     ) where
 
-import Control.Arrow (Arrow (..), ArrowChoice (..), ArrowLoop (..), Kleisli (..), (<<<), (>>>))
+import Control.Arrow
+    ( Arrow (..)
+    , ArrowChoice (..)
+    , ArrowLoop (..)
+    , Kleisli (..)
+    , (<<<)
+    , (>>>)
+    )
 import Control.Category (Category (..))
 import Control.Monad.Fix (MonadFix)
-import Protolude hiding (first, second, (.))
+import Protolude hiding (first, pred, second, (.))
 import Synch.RefStore
 import Synch.System
 import Prelude (error)
@@ -106,13 +115,6 @@ switch_ sf1 sf2 =
         (sf1 >>> second (arr guard))
         (const sf2)
 
-whenA :: Monad m => SF m () Bool -> SF m a b -> SF m a (Event b)
-whenA cond sf = proc a -> do
-    c <- cond -< ()
-    if c
-        then arr Just <<< sf -< a
-        else id -< Nothing
-
 action :: Monad m => (a -> m b) -> SF m a b
 action = SF . return . Kleisli
 
@@ -154,27 +156,31 @@ latch init = SF $ do
         forM_ e $ setRef r
         getRef r
 
+-- | Emit an event when the input value changes compared to previous cycle
+onChange :: (RefStore m, Eq a) => SF m a (Event a)
+onChange = proc a -> do
+    let ja = Just a
+    prev <- delay Nothing -< ja
+    arr (\(x, y) -> guard (x /= y) >> y) -< (prev, ja)
+
+-- | Emit an event when the input value changes compared to previous cycle
+positiveEdge :: RefStore m => SF m Bool (Event ())
+positiveEdge = proc a -> do
+    prev <- delay False -< a
+    arr (\(x, y) -> guard (not x && y)) -< (prev, a)
+
 onEvent :: Monad m => SF m a b -> SF m (Event a) (Event b)
 onEvent sf = proc aev -> case aev of
     Just a -> arr Just <<< sf -< a
     Nothing -> id -< Nothing
 
--- | Slow down a system by only ticking it every nth time
-everyN :: RefStore m => Int -> SF m a b -> SF m a (Event b)
-everyN n _
-    | n <= 0 = error $ "every: expected positive number, got " ++ show n
-everyN n (SF init) = SF $ do
-    next <- init
-    c <- newRef 0
-    stream $ \a -> do
-        count <- getRef c
-        if count == n
-            then do
-                setRef c 0
-                Just <$> runKleisli next a
-            else do
-                setRef c (count + 1)
-                return Nothing
+filterSF :: Monad m => (a -> Bool) -> SF m a (Event a)
+filterSF pred = arr (\a -> guard (pred a) >> return a)
+
+everyN :: RefStore m => Int -> SF m () (Event ())
+everyN n
+    | n <= 0 = error $ "everyN expected positive number, got " ++ show n
+    | otherwise = rangeCounter 1 n >>> filterSF (== n) >>> arr void
 
 refInput :: RefStore m => Ref m a -> SF m () a
 refInput = action . const . getRef

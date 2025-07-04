@@ -8,7 +8,15 @@ module Player
 import Control.Arrow (Arrow (arr), (<<<), (>>>))
 import Data.Fixed (Fixed (MkFixed))
 import Protolude
-import Synch (Event, SF (..), counter, everyN, latch)
+import Synch
+    ( Event
+    , SF (..)
+    , counter
+    , everyN
+    , latch
+    , onEvent
+    , positiveEdge
+    )
 import Synch.RefStore (RefStore)
 import TUI (AppEvent (..))
 import Time (prettyElapsedTime, secondsToElapsedTime)
@@ -40,4 +48,11 @@ pausablePlayer = proc running -> do
 player :: RefStore m => SF m Bool (Event AppEvent)
 player = proc running -> do
     pos <- pausablePlayer -< running
-    fmap join (everyN 10 reporter) -< pos
+    slowTick <- everyN 10 -< ()
+    justPaused <- positiveEdge -< not running
+
+    -- We want to avoid updating the UI too often, so we only do it when there's a slow
+    -- tick or when the player was just paused. The application feels "laggy" if the UI is
+    -- updated some time after the pause. That's why we update immediately on pause.
+    let updateUI = slowTick <|> justPaused
+    arr join <<< onEvent reporter -< fmap (const pos) updateUI
