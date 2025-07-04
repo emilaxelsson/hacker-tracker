@@ -5,7 +5,7 @@ module Player
     , playerMillisPerTick
     ) where
 
-import Control.Arrow (Arrow (arr), (<<<), (>>>))
+import Control.Arrow (Arrow (arr), (>>>))
 import Data.Fixed (Fixed (MkFixed))
 import Protolude
 import Synch (Event, SF (..), counter, everyN, latch)
@@ -37,7 +37,7 @@ pausablePlayer = proc running -> do
             else arr (const Nothing) -< ()
     latch Nothing -< ticks
 
-player :: RefStore m => SF m (Event AppEvent) () -> SF m () Bool -> SF m () ()
-player sinkAppEvent isRunning = proc () -> do
-    pos <- pausablePlayer <<< isRunning -< ()
-    void (everyN 10 (reporter >>> sinkAppEvent)) -< pos
+player :: RefStore m => SF m Bool (Event AppEvent)
+player = proc running -> do
+    pos <- pausablePlayer -< running
+    fmap join (everyN 10 reporter) -< pos

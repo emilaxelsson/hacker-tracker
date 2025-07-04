@@ -3,6 +3,7 @@
 module Main where
 
 import Brick.BChan (newBChan, writeBChan)
+import Control.Arrow ((>>>))
 import Data.IORef (newIORef, writeIORef)
 import Player (player, playerMillisPerTick)
 import Protolude
@@ -23,9 +24,9 @@ main = do
         ( forkIO $
             execSystemForever playerMillisPerTick $
                 runSF $
-                    player
-                        (void $ onEvent $ action $ writeBChan eventChan)
-                        (refInput runningRef)
+                    refInput runningRef
+                        >>> player
+                        >>> void (onEvent $ action $ writeBChan eventChan)
         )
         killThread
         ( const $
