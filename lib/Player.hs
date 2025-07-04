@@ -5,7 +5,7 @@ module Player
     , playerMillisPerTick
     ) where
 
-import Control.Arrow (Arrow (arr), (>>>))
+import Control.Arrow (Arrow (arr), (<<<), (>>>))
 import Data.Fixed (Fixed (MkFixed))
 import Protolude
 import Synch (Event, SF (..), counter, everyN, latch)
@@ -33,7 +33,7 @@ pausablePlayer :: RefStore m => SF m Bool (Maybe Int)
 pausablePlayer = proc running -> do
     ticks <-
         if running
-            then (Just . Just <$> player') -< ()
+            then arr (Just . Just) <<< player' -< ()
             else arr (const Nothing) -< ()
     latch Nothing -< ticks
 

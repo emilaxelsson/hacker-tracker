@@ -3,9 +3,8 @@
 
 module SynchSpec (spec) where
 
-import Control.Arrow (returnA)
 import Protolude
-import Synch (SF, action, counter, evalSF, rangeCounter, runSF)
+import Synch
 import Synch.RefStore
 import Synch.System (execSystem)
 import Test.Hspec
@@ -44,4 +43,4 @@ pingPong put1 put2 = proc () -> do
         else action put2 -< c
 
     let oneMoreStep = c < 19
-    returnA -< oneMoreStep
+    id -< oneMoreStep

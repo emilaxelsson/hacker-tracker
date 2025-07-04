@@ -1,5 +1,3 @@
-{-# LANGUAGE Arrows #-}
-
 module Main where
 
 import Brick.BChan (newBChan, writeBChan)

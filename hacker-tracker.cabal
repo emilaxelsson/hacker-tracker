@@ -97,7 +97,6 @@ test-suite tests
     other-modules:    ParserSpec
                       SynchSpec
 
-    build-depends:    base,
-                      hacker-tracker,
+    build-depends:    hacker-tracker,
                       hspec,
                       protolude,

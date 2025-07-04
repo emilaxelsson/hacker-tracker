@@ -2,7 +2,8 @@
 {-# LANGUAGE RecursiveDo #-}
 
 module Synch
-    ( SF (..)
+    ( id
+    , SF (..)
     , runSF
     , evalSF
     , stream
@@ -21,7 +22,7 @@ module Synch
     , refInput
     ) where
 
-import Control.Arrow (Arrow (..), ArrowChoice (..), ArrowLoop (..), Kleisli (..), returnA, (<<<), (>>>))
+import Control.Arrow (Arrow (..), ArrowChoice (..), ArrowLoop (..), Kleisli (..), (<<<), (>>>))
 import Control.Category (Category (..))
 import Control.Monad.Fix (MonadFix)
 import Protolude hiding (first, second, (.))
@@ -109,8 +110,8 @@ whenA :: Monad m => SF m () Bool -> SF m a b -> SF m a (Event b)
 whenA cond sf = proc a -> do
     c <- cond -< ()
     if c
-        then (Just <$> sf) -< a
-        else returnA -< Nothing
+        then arr Just <<< sf -< a
+        else id -< Nothing
 
 action :: Monad m => (a -> m b) -> SF m a b
 action = SF . return . Kleisli
@@ -156,7 +157,7 @@ latch init = SF $ do
 onEvent :: Monad m => SF m a b -> SF m (Event a) (Event b)
 onEvent sf = proc aev -> case aev of
     Just a -> arr Just <<< sf -< a
-    Nothing -> returnA -< Nothing
+    Nothing -> id -< Nothing
 
 -- | Slow down a system by only ticking it every nth time
 everyN :: RefStore m => Int -> SF m a b -> SF m a (Event b)
