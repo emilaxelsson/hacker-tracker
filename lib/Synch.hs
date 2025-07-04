@@ -16,18 +16,12 @@ module Synch
     , counter
     , rangeCounter
     , latch
+    , onEvent
     , everyN
     , refInput
     ) where
 
-import Control.Arrow
-    ( Arrow (..)
-    , ArrowChoice (..)
-    , ArrowLoop (..)
-    , Kleisli (..)
-    , returnA
-    , (>>>)
-    )
+import Control.Arrow (Arrow (..), ArrowChoice (..), ArrowLoop (..), Kleisli (..), returnA, (<<<), (>>>))
 import Control.Category (Category (..))
 import Control.Monad.Fix (MonadFix)
 import Protolude hiding (first, second, (.))
@@ -158,6 +152,11 @@ latch init = SF $ do
     stream $ \e -> do
         forM_ e $ setRef r
         getRef r
+
+onEvent :: Monad m => SF m a b -> SF m (Event a) (Event b)
+onEvent sf = proc aev -> case aev of
+    Just a -> arr Just <<< sf -< a
+    Nothing -> returnA -< Nothing
 
 -- | Slow down a system by only ticking it every nth time
 everyN :: RefStore m => Int -> SF m a b -> SF m a (Event b)

@@ -54,6 +54,7 @@ library
 
     exposed-modules:
         Oops
+        Player
         Synch.RefStore
         Synch.System
         Synch
