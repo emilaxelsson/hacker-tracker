@@ -5,38 +5,36 @@ module Player
     , playerMillisPerTick
     ) where
 
-import Control.Arrow (Arrow (arr), (>>>), (<<<))
+import Control.Arrow (Arrow (arr), (<<<), (>>>))
 import Data.Fixed (Fixed (MkFixed))
 import Protolude
-import Synch (Event, SF (..), action, counter, everyN, latch)
+import Synch (Event, SF (..), counter, everyN, latch)
+import Synch.RefStore (RefStore)
 import TUI (AppEvent (..))
 import Time (prettyElapsedTime, secondsToElapsedTime)
-import Synch.RefStore (RefStore)
 
 playerMillisPerTick :: Int
 playerMillisPerTick = 15
 
 reporter :: Monad m => SF m (Maybe Int) (Event AppEvent)
-reporter =
-    action $ \case
-        Nothing -> return Nothing
-        Just ticks ->
-            let elapsedMillis = ticks * playerMillisPerTick
-                elapsedPretty =
-                    prettyElapsedTime $
-                        secondsToElapsedTime $
-                            MkFixed $
-                                fromIntegral elapsedMillis
-             in return $ Just $ NowPlaying elapsedPretty
+reporter = arr $ fmap $ \ticks ->
+    let elapsedMillis = ticks * playerMillisPerTick
+        elapsedPretty =
+            prettyElapsedTime $
+                secondsToElapsedTime $
+                    MkFixed $
+                        fromIntegral elapsedMillis
+     in NowPlaying elapsedPretty
 
 player' :: RefStore m => SF m () Int
 player' = arr (const True) >>> counter
 
 pausablePlayer :: RefStore m => SF m Bool (Maybe Int)
 pausablePlayer = proc running -> do
-    ticks <- if running
-        then (Just . Just <$> player') -< ()
-        else arr (const Nothing) -< ()
+    ticks <-
+        if running
+            then (Just . Just <$> player') -< ()
+            else arr (const Nothing) -< ()
     latch Nothing -< ticks
 
 player :: RefStore m => SF m (Event AppEvent) () -> SF m () Bool -> SF m () ()
