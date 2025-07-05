@@ -8,7 +8,6 @@ module Synch
     , evalSF
     , stream
     , Event
-    , never
     , switch
     , switch_
     , action
@@ -82,18 +81,22 @@ evalSF sf input = runST m
 
         go input []
 
+-- | Useful function for constructing an 'SF'
+--
+-- >>> evalSF (SF $ stream return) [1,2,3]
+-- [1,2,3]
 stream :: Monad m => (a -> m b) -> m (Kleisli m a b)
 stream = return . Kleisli
 
 type Event = Maybe
 
-never :: Event a
-never = Nothing
+-- The implementation of `switch` is decent in that `forM_ event ...` is never executed
+-- again after the switch. However, the reference will live on forever and be read in each
+-- step. This is a problem in case of many nested switches (e.g. an infinite loop that
+-- flip-flops between two behaviors). The solution is probably to somehow build switching
+-- into `SF`.
 
--- Decent implementation in that `forM_ event ...` is never executed again after the
--- switch. However, the reference will live on forever and be read in each step. This is a
--- problem in case of many nested switches (e.g. an infinite loop that flip-flops between
--- two behaviors). The solution is probably to somehow build switching into `SF`.
+-- | Note: leaks memory
 switch :: (RefStore m, MonadFix m) => SF m a (b, Event c) -> (c -> SF m a b) -> SF m a b
 switch (SF init) k = SF $ mdo
     next <- init
@@ -109,16 +112,26 @@ switch (SF init) k = SF $ mdo
         next' <- getRef nextRef
         runKleisli next' a
 
+-- | Note: leaks memory
 switch_ :: (RefStore m, MonadFix m) => SF m a (b, Bool) -> SF m a b -> SF m a b
 switch_ sf1 sf2 =
     switch
         (sf1 >>> second (arr guard))
         (const sf2)
 
+-- | Lift a monadic action to a signal function
 action :: Monad m => (a -> m b) -> SF m a b
-action = SF . return . Kleisli
+action = SF . stream
 
-delay :: RefStore m => a -> SF m a a
+-- | Delay a signal by one time step
+--
+-- >>> evalSF (delay 0) [1,2,3]
+-- [0,1,2]
+delay
+    :: RefStore m
+    => a
+    -- ^ Initial value
+    -> SF m a a
 delay init = SF $ do
     r <- newRef init
     stream $ \a -> do
@@ -126,17 +139,34 @@ delay init = SF $ do
         setRef r a
         return a'
 
+-- | Count the number of incoming 'True' values
+--
+-- >>> evalSF counter [False, False, True, True, False, True]
+-- [0,0,1,2,2,3]
 counter :: RefStore m => SF m Bool Int
 counter = SF $ do
     cnt <- newRef 0
     stream $ \tick -> do
         c <- getRef cnt
-        when tick $
-            void $
-                setRef cnt (c + 1)
-        return c
+        if tick
+            then do
+                let c' = c + 1
+                setRef cnt c'
+                return c'
+            else
+                return c
 
-rangeCounter :: RefStore m => Int -> Int -> SF m () Int
+-- | Count continuously from lower to upper bound (inclusive)
+--
+-- >>> evalSF (rangeCounter 3 6) (replicate 10 ())
+-- [3,4,5,6,3,4,5,6,3,4]
+rangeCounter
+    :: RefStore m
+    => Int
+    -- ^ Lower bound
+    -> Int
+    -- ^ Upper bound
+    -> SF m () Int
 rangeCounter low high
     | low > high = error $ "rangeCounter: invalid range " ++ show (low, high)
     | otherwise = SF $ do
@@ -149,7 +179,15 @@ rangeCounter low high
                     else setRef cnt (c + 1)
             return c
 
-latch :: RefStore m => a -> SF m (Event a) a
+-- | Hold the value of each event until the next event
+--
+-- >>> evalSF (latch 0) [Nothing, Nothing, Just 5, Nothing, Nothing, Just 6, Just 7]
+-- [0,0,5,5,5,6,7]
+latch
+    :: RefStore m
+    => a
+    -- ^ Initial value
+    -> SF m (Event a) a
 latch init = SF $ do
     r <- newRef init
     stream $ \e -> do
@@ -157,30 +195,46 @@ latch init = SF $ do
         getRef r
 
 -- | Emit an event when the input value changes compared to previous cycle
+--
+-- >>> evalSF onChange [1,1,1,1,4,4,4,4,5]
+-- [Just 1,Nothing,Nothing,Nothing,Just 4,Nothing,Nothing,Nothing,Just 5]
 onChange :: (RefStore m, Eq a) => SF m a (Event a)
 onChange = proc a -> do
     let ja = Just a
     prev <- delay Nothing -< ja
     arr (\(x, y) -> guard (x /= y) >> y) -< (prev, ja)
 
--- | Emit an event when the input value changes compared to previous cycle
+-- | Emit an event when the changes from 'False' to 'True'
+--
+-- >>> evalSF positiveEdge [False,False,True,True,False,True]
+-- [Nothing,Nothing,Just (),Nothing,Nothing,Just ()]
 positiveEdge :: RefStore m => SF m Bool (Event ())
 positiveEdge = proc a -> do
     prev <- delay False -< a
     arr (\(x, y) -> guard (not x && y)) -< (prev, a)
 
+-- | Run the provided signal function on each input event
 onEvent :: Monad m => SF m a b -> SF m (Event a) (Event b)
 onEvent sf = proc aev -> case aev of
     Just a -> arr Just <<< sf -< a
     Nothing -> id -< Nothing
 
+-- | Keep only the values that satisfy the given predicate
+--
+-- >>> evalSF (filterSF even) [1..6]
+-- [Nothing,Just 2,Nothing,Just 4,Nothing,Just 6]
 filterSF :: Monad m => (a -> Bool) -> SF m a (Event a)
 filterSF pred = arr (\a -> guard (pred a) >> return a)
 
+-- | Emit an event every nth time step
+--
+-- >>> evalSF (everyN 3) (replicate 10 ())
+-- [Nothing,Nothing,Just (),Nothing,Nothing,Just (),Nothing,Nothing,Just (),Nothing]
 everyN :: RefStore m => Int -> SF m () (Event ())
 everyN n
     | n <= 0 = error $ "everyN expected positive number, got " ++ show n
     | otherwise = rangeCounter 1 n >>> filterSF (== n) >>> arr void
 
+-- | Make a signal function that pulls values from a reference
 refInput :: RefStore m => Ref m a -> SF m () a
 refInput = action . const . getRef
