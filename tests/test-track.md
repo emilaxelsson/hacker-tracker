@@ -1,6 +1,8 @@
 * bpm:    135
 * instr:  HH 2
 * instr:  KD 4
+* instr:  SD 5
+* instr:  BA 13
 
 
 
