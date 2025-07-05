@@ -36,54 +36,67 @@ getHeading level n =
         Left $
             mconcat ["Ill-formatted level-", show level, " heading."]
 
-data ConfigItem
-    = ConfigBPM Int
-    | ConfigInstr InstrumentAcr InstrumentTarget
-    deriving stock (Show)
-
-parseConfig :: Text -> Maybe ConfigItem
-parseConfig item = do
+parseConfigItem :: Text -> Maybe (Text, Text)
+parseConfigItem item = do
     let (key', value') = Text.break (== ':') item
     let key = Text.strip key'
     let value = Text.strip $ Text.dropWhile (== ':') value'
+    return (Text.map toLower key, value)
 
-    case Text.map toLower key of
-        "bpm" -> ConfigBPM <$> readMaybe value
-        "instr" -> do
-            [acr, tgt] <- return $ Text.words value
-            guard $ Text.length acr < 10
-            guard $ Text.all isUpper acr
-            target <- readMaybe tgt
-            return $ ConfigInstr (InstrumentAcr acr) (InstrumentTarget target)
-        _ -> Nothing
-
-getConfigItem :: MD.Node -> Either LocatedError ConfigItem
+getConfigItem :: MD.Node -> Either LocatedError (Text, Text)
 getConfigItem (MD.Node _ MD.ITEM [MD.Node _ MD.PARAGRAPH [MD.Node _ (MD.TEXT item) []]])
-    | Just conf <- parseConfig item = return conf
+    | Just conf <- parseConfigItem item = return conf
 getConfigItem n = Left $ locatedError n "Ill-formatted config item."
 
-getConfig :: [MD.Node] -> Either LocatedError TrackConfig
-getConfig [] = Left (Nothing, "Missing track config.")
-getConfig (n : _ : _) = Left $ locatedError n "Config section should consist of a single bullet list."
-getConfig [config] = case config of
+-- | Checks for duplicate config keys
+getConfigItems
+    :: (Text -> Text -> Maybe configItem)
+    -- ^ Parse a key and a value to a config item. Key is always in lower-case letters.
+    -> MD.Node
+    -> Either LocatedError [configItem]
+getConfigItems itemParser config = case config of
     MD.Node _ (MD.LIST (MD.ListAttributes MD.BULLET_LIST _ _ _)) items -> do
         cs <- mapM getConfigItem items
-
-        bpm <- first (locatedError config) $ case [bpm | ConfigBPM bpm <- cs] of
-            [] -> Left "Missing BPM config."
-            _ : _ : _ -> Left "Multiple BPM configs."
-            [b] -> return b
-
-        let instrAcrs = [acr | ConfigInstr acr _ <- cs]
-        let dups = List.nub (instrAcrs List.\\ List.nub instrAcrs)
-        when (not $ null dups) $
-            Left $
-                locatedError config $
-                    "Multiple definitions of instruments: " <> show dups
-        let instruments = HM.fromList [(a, t) | ConfigInstr a t <- cs]
-
-        return $ TrackConfig{bpm, instruments}
+        for cs $ \(key, value) ->
+            maybe (Left $ locatedError config $ "Cannot parse config item " <> show key) Right $
+                itemParser key value
     n -> Left $ locatedError n "Config section should be a bullet list."
+
+data TrackConfigItem
+    = TrackConfigBPM Int
+    | TrackConfigInstr InstrumentAcr InstrumentTarget
+    deriving stock (Show)
+
+parseTrackConfigItem :: Text -> Text -> Maybe TrackConfigItem
+parseTrackConfigItem "bpm" value = TrackConfigBPM <$> readMaybe value
+parseTrackConfigItem "instr" value = do
+    [acr, tgt] <- return $ Text.words value
+    guard $ Text.length acr < 10
+    guard $ Text.all isUpper acr
+    target <- readMaybe tgt
+    return $ TrackConfigInstr (InstrumentAcr acr) (InstrumentTarget target)
+parseTrackConfigItem _ _ = Nothing
+
+getTrackConfig :: [MD.Node] -> Either LocatedError TrackConfig
+getTrackConfig [] = Left (Nothing, "Missing track config section.")
+getTrackConfig (n : _ : _) = Left $ locatedError n "Track config section should consist of a single bullet list."
+getTrackConfig [config] = do
+    cs <- getConfigItems parseTrackConfigItem config
+
+    bpm <- first (locatedError config) $ case [bpm | TrackConfigBPM bpm <- cs] of
+        [] -> Left "Missing BPM config."
+        _ : _ : _ -> Left "Multiple BPM configs."
+        [b] -> return b
+
+    let instrAcrs = [acr | TrackConfigInstr acr _ <- cs]
+    let dups = List.nub (instrAcrs List.\\ List.nub instrAcrs)
+    unless (null dups) $
+        Left $
+            locatedError config $
+                "Multiple definitions of instruments: " <> show dups
+    let instruments = HM.fromList [(a, t) | TrackConfigInstr a t <- cs]
+
+    return $ TrackConfig{bpm, instruments}
 
 getSectionPatterns :: [((MD.PosInfo, Text), [MD.Node])] -> Either LocatedError [Pattern]
 getSectionPatterns [] = return []
@@ -126,7 +139,7 @@ mdToTrack :: MD.Node -> Either LocatedError Track
 mdToTrack (MD.Node _ typ nodes)
     | typ /= MD.DOCUMENT = oops $ toS $ unexpectedNodeType MD.DOCUMENT typ
     | otherwise = do
-        config <- getConfig intro
+        config <- getTrackConfig intro
         sections <- getTrackSections h1s
         return $ Track{config, sections}
   where
