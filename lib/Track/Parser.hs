@@ -126,35 +126,35 @@ pitchParser = do
         guard $ o >= 0
         guard $ o <= 8
 
-    pitch <- case (name, raised) of
-        ('A', False) -> return 0
-        ('A', True) -> return 1
-        ('B', False) -> return 2
-        ('C', False) -> return 3
-        ('C', True) -> return 4
-        ('D', False) -> return 5
-        ('D', True) -> return 6
-        ('E', False) -> return 7
-        ('F', False) -> return 8
-        ('F', True) -> return 9
-        ('G', False) -> return 10
-        ('G', True) -> return 11
+    noteName <- case (name, raised) of
+        ('A', False) -> return A
+        ('A', True) -> return As
+        ('B', False) -> return B
+        ('C', False) -> return C
+        ('C', True) -> return Cs
+        ('D', False) -> return D
+        ('D', True) -> return Ds
+        ('E', False) -> return E
+        ('F', False) -> return F
+        ('F', True) -> return Fs
+        ('G', False) -> return G
+        ('G', True) -> return Gs
         _ -> Parse.pfail
 
-    return Pitch{pitch, octave}
+    return Pitch{noteName, octave}
 
 -- |
 -- >>> parsePitch "A"
--- Just (Pitch {pitch = 0, octave = Nothing})
+-- Just (Pitch {noteName = A, octave = Nothing})
 --
 -- >>> parsePitch "B5"
--- Just (Pitch {pitch = 2, octave = Just 5})
+-- Just (Pitch {noteName = B, octave = Just 5})
 --
 -- >>> parsePitch "C#"
--- Just (Pitch {pitch = 4, octave = Nothing})
+-- Just (Pitch {noteName = Cs, octave = Nothing})
 --
 -- >>> parsePitch "G#4"
--- Just (Pitch {pitch = 11, octave = Just 4})
+-- Just (Pitch {noteName = Gs, octave = Just 4})
 --
 -- >>> parsePitch "E#"
 -- Nothing

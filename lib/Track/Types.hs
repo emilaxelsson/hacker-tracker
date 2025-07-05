@@ -16,8 +16,23 @@ newtype InstrumentTarget = InstrumentTarget {unInstrumentTarget :: Int}
 newtype Velocity = Velocity {unVelocity :: Int}
     deriving newtype (Show)
 
+data NoteName
+    = A
+    | As
+    | B
+    | C
+    | Cs
+    | D
+    | Ds
+    | E
+    | F
+    | Fs
+    | G
+    | Gs
+    deriving stock (Eq, Show, Enum, Bounded)
+
 data Pitch = Pitch
-    { pitch :: Int
+    { noteName :: NoteName
     , octave :: Maybe Int
     }
     deriving stock (Show)
