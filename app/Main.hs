@@ -1,4 +1,4 @@
-module Main where
+module Main (main) where
 
 import Brick.BChan (newBChan, writeBChan)
 import Control.Arrow ((>>>))

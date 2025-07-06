@@ -88,6 +88,21 @@ executable hacker-tracker
                       hacker-tracker,
                       protolude,
 
+executable align-tracks
+    import:           warnings
+    import:           extensions
+    hs-source-dirs:   align-tracks
+    main-is:          Main.hs
+    ghc-options:      -Werror
+
+    build-depends:    cmark,
+                      base,
+                      filepath,
+                      hacker-tracker,
+                      protolude,
+                      text,
+                      unordered-containers,
+
 test-suite tests
     import:           warnings
     import:           extensions

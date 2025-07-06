@@ -6,7 +6,7 @@ import Protolude
 
 -- | Acronym representing an instrument in the tracker source
 newtype InstrumentAcr = InstrumentAcr {unInstrumentAcr :: Text}
-    deriving newtype (Eq, Show, Hashable, IsString)
+    deriving newtype (Eq, Ord, Show, Hashable, IsString)
 
 -- | Instrument number in the target output
 newtype InstrumentTarget = InstrumentTarget {unInstrumentTarget :: Int}
