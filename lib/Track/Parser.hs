@@ -1,13 +1,18 @@
-module Track.Parser where
+module Track.Parser
+    ( parseNote
+    , parseRow
+    , parseTrack
+    ) where
 
 import CMark qualified as MD
+import Data.Char (isNumber)
 import Data.HashMap.Strict qualified as HM
 import Data.HashSet (HashSet)
 import Data.HashSet qualified as HS
 import Data.List qualified as List
 import Data.Text qualified as Text
 import Oops
-import Protolude
+import Protolude hiding (note)
 import Text.ParserCombinators.ReadP qualified as Parse
 import Track.Types
 import Utils
@@ -143,55 +148,47 @@ pitchParser = do
 
     return Pitch{noteName, octave}
 
--- |
--- >>> parsePitch "A"
--- Just (Pitch {noteName = A, octave = Nothing})
---
--- >>> parsePitch "B5"
--- Just (Pitch {noteName = B, octave = Just 5})
---
--- >>> parsePitch "C#"
--- Just (Pitch {noteName = Cs, octave = Nothing})
---
--- >>> parsePitch "G#4"
--- Just (Pitch {noteName = Gs, octave = Just 4})
---
--- >>> parsePitch "E#"
--- Nothing
---
--- >>> parsePitch "EF"
--- Nothing
-parsePitch :: Text -> Maybe Pitch
-parsePitch p = case Parse.readP_to_S pitchParser $ Text.unpack p of
-    [(pitch, "")] -> Just pitch
-    _ -> Nothing
+instrParser :: HashSet InstrumentAcr -> Parse.ReadP InstrumentAcr
+instrParser knownInstruments = do
+    instr <- fmap (InstrumentAcr . Text.pack) $ Parse.munch1 $ \c -> c >= 'A' && c <= 'Z'
+    guard $ instr `HS.member` knownInstruments
+    return instr
+
+velocityParser :: Parse.ReadP Velocity
+velocityParser = do
+    n <- Parse.munch1 isNumber
+    Just v <- return $ readMaybe n
+    return $ Velocity v
+
+noteParser :: HashSet InstrumentAcr -> Parse.ReadP Note
+noteParser knownInstruments = do
+    instrument <- instrParser knownInstruments
+
+    let withVelocityAndPitch = do
+            void $ Parse.char '-'
+            velocity <- Just <$> velocityParser
+            void $ Parse.char '-'
+            pitch <- Just <$> pitchParser
+            return $ Note{instrument, velocity, pitch}
+
+    let withVelocity = do
+            void $ Parse.char '-'
+            velocity <- Just <$> velocityParser
+            return $ Note{instrument, velocity, pitch = Nothing}
+
+    let withPitch = do
+            void $ Parse.char '-'
+            pitch <- Just <$> pitchParser
+            return $ Note{instrument, velocity = Nothing, pitch}
+
+    let onlyInstrument = Parse.eof >> return Note{instrument, velocity = Nothing, pitch = Nothing}
+
+    withVelocityAndPitch Parse.<++ withVelocity Parse.<++ withPitch Parse.<++ onlyInstrument
 
 parseNote :: HashSet InstrumentAcr -> MD.PosInfo -> Text -> Either LocatedError Note
-parseNote is pos word = do
-    let fields = Text.splitOn "-" word
-
-    when (length fields > 3) $
-        Left (Just pos, "Note has more than 3 fields.")
-
-    instr <- maybe (Left (Just pos, "Note has no instrument.")) Right $ fields List.!? 0
-    let instrument = InstrumentAcr instr
-    unless (HS.member instrument is) $
-        Left (Just pos, "Not a valid instrument: '" <> instr <> "'")
-
-    -- Note: Cannot be negative, because we have split `word` on '-'
-    velocity <- for (fields List.!? 1) $ \vel ->
-        maybe (Left (Just pos, "Cannot parse velocity: '" <> vel <> "'")) (Right . Velocity) $
-            readMaybe vel
-
-    pitch <- for (fields List.!? 2) $ \p ->
-        maybe (Left (Just pos, "Cannot parse pitch: '" <> p <> "'")) Right $ parsePitch p
-
-    return $
-        Note
-            { instrument
-            , velocity
-            , pitch
-            }
+parseNote knownInstruments pos word = case Parse.readP_to_S (noteParser knownInstruments) $ Text.unpack word of
+    [(note, "")] -> Right note
+    _ -> Left (Just pos, "Cannot parse note: '" <> word <> "'")
 
 parseRow :: HashSet InstrumentAcr -> (MD.PosInfo, Text) -> Either LocatedError Row
 parseRow is (pos@MD.PosInfo{startLine = rowSourceLine}, line) = do

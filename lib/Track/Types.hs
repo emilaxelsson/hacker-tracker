@@ -7,14 +7,14 @@ import Protolude
 
 -- | Acronym representing an instrument in the tracker source
 newtype InstrumentAcr = InstrumentAcr {unInstrumentAcr :: Text}
-    deriving newtype (Show, Eq, Hashable)
+    deriving newtype (Eq, Show, Hashable, IsString)
 
 -- | Instrument number in the target output
 newtype InstrumentTarget = InstrumentTarget {unInstrumentTarget :: Int}
     deriving newtype (Show)
 
 newtype Velocity = Velocity {unVelocity :: Int}
-    deriving newtype (Show)
+    deriving newtype (Eq, Show, Num)
 
 data NoteName
     = A
@@ -35,14 +35,14 @@ data Pitch = Pitch
     { noteName :: NoteName
     , octave :: Maybe Int
     }
-    deriving stock (Show)
+    deriving stock (Eq, Show, Generic)
 
 data Note = Note
     { instrument :: InstrumentAcr
     , velocity :: Maybe Velocity
     , pitch :: Maybe Pitch
     }
-    deriving stock (Show)
+    deriving stock (Eq, Show, Generic)
 
 data Row = Row
     { rowSourceLine :: Int

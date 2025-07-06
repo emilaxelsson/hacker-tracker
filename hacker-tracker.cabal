@@ -15,6 +15,7 @@ common extensions
     default-language: Haskell2010
     default-extensions:
         DeriveAnyClass
+        DeriveGeneric
         DerivingStrategies
         DerivingVia
         DuplicateRecordFields
@@ -60,6 +61,7 @@ library
         Synch
         Time
         Track.Parser
+        Track.PrettyPrinter
         Track.Types
         TUI
         Utils
@@ -97,6 +99,9 @@ test-suite tests
     other-modules:    ParserSpec
                       SynchSpec
 
-    build-depends:    hacker-tracker,
+    build-depends:    cmark,
+                      hacker-tracker,
                       hspec,
                       protolude,
+                      QuickCheck,
+                      unordered-containers,
