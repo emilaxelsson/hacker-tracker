@@ -2,6 +2,7 @@ module Track.Parser
     ( parseNote
     , parseRow
     , parseTrack
+    , parseTrackConfig
     ) where
 
 import CMark qualified as MD
@@ -18,9 +19,6 @@ type LocatedError = (Maybe MD.PosInfo, Text)
 
 locatedError :: MD.Node -> Text -> LocatedError
 locatedError (MD.Node pos _ _) msg = (pos, msg)
-
-parseTrack :: Text -> Either LocatedError Track
-parseTrack = mdToTrack . MD.commonmarkToNode []
 
 unexpectedNodeType :: MD.NodeType -> MD.NodeType -> Text
 unexpectedNodeType expected actual =
@@ -183,9 +181,10 @@ noteParser knownInstruments = do
     withVelocityAndPitch Parse.<++ withVelocity Parse.<++ withPitch Parse.<++ onlyInstrument
 
 parseNote :: Maybe [InstrumentAcr] -> MD.PosInfo -> Text -> Either LocatedError Note
-parseNote knownInstruments pos word = case Parse.readP_to_S (noteParser knownInstruments) $ Text.unpack word of
-    [(note, "")] -> Right note
-    _ -> Left (Just pos, "Cannot parse note: '" <> word <> "'")
+parseNote knownInstruments pos word =
+    case Parse.readP_to_S (noteParser knownInstruments) $ Text.unpack word of
+        [(note, "")] -> Right note
+        _ -> Left (Just pos, "Cannot parse note: '" <> word <> "'")
 
 parseRow
     :: Maybe [InstrumentAcr]
@@ -276,3 +275,16 @@ mdToTrack (MD.Node _ typ nodes)
         return $ Track{config, sections}
   where
     (intro, h1s) = splitOn (either (const Nothing) Just . getHeading 1) nodes
+
+mdToConfig :: MD.Node -> Either LocatedError TrackConfig
+mdToConfig (MD.Node _ typ nodes)
+    | typ /= MD.DOCUMENT = oops $ toS $ unexpectedNodeType MD.DOCUMENT typ
+    | otherwise = getTrackConfig intro
+  where
+    (intro, _) = splitOn (either (const Nothing) Just . getHeading 1) nodes
+
+parseTrack :: Text -> Either LocatedError Track
+parseTrack = mdToTrack . MD.commonmarkToNode []
+
+parseTrackConfig :: Text -> Either LocatedError TrackConfig
+parseTrackConfig = mdToConfig . MD.commonmarkToNode []
