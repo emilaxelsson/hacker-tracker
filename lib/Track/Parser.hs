@@ -6,9 +6,6 @@ module Track.Parser
 
 import CMark qualified as MD
 import Data.Char (isNumber)
-import Data.HashMap.Strict qualified as HM
-import Data.HashSet (HashSet)
-import Data.HashSet qualified as HS
 import Data.List qualified as List
 import Data.Text qualified as Text
 import Oops
@@ -102,7 +99,7 @@ getTrackConfig [config] = do
         Left $
             locatedError config $
                 "Multiple definitions of instruments: " <> show dups
-    let instruments = HM.fromList [(a, t) | TrackConfigInstr a t <- cs]
+    let instruments = [(a, t) | TrackConfigInstr a t <- cs]
 
     return $ TrackConfig{bpm, instruments}
 
@@ -148,10 +145,10 @@ pitchParser = do
 
     return Pitch{noteName, octave}
 
-instrParser :: HashSet InstrumentAcr -> Parse.ReadP InstrumentAcr
+instrParser :: [InstrumentAcr] -> Parse.ReadP InstrumentAcr
 instrParser knownInstruments = do
     instr <- fmap (InstrumentAcr . Text.pack) $ Parse.munch1 $ \c -> c >= 'A' && c <= 'Z'
-    guard $ instr `HS.member` knownInstruments
+    guard $ instr `elem` knownInstruments
     return instr
 
 velocityParser :: Parse.ReadP Velocity
@@ -160,7 +157,7 @@ velocityParser = do
     Just v <- return $ readMaybe n
     return $ Velocity v
 
-noteParser :: HashSet InstrumentAcr -> Parse.ReadP Note
+noteParser :: [InstrumentAcr] -> Parse.ReadP Note
 noteParser knownInstruments = do
     instrument <- instrParser knownInstruments
 
@@ -185,18 +182,18 @@ noteParser knownInstruments = do
 
     withVelocityAndPitch Parse.<++ withVelocity Parse.<++ withPitch Parse.<++ onlyInstrument
 
-parseNote :: HashSet InstrumentAcr -> MD.PosInfo -> Text -> Either LocatedError Note
+parseNote :: [InstrumentAcr] -> MD.PosInfo -> Text -> Either LocatedError Note
 parseNote knownInstruments pos word = case Parse.readP_to_S (noteParser knownInstruments) $ Text.unpack word of
     [(note, "")] -> Right note
     _ -> Left (Just pos, "Cannot parse note: '" <> word <> "'")
 
-parseRow :: HashSet InstrumentAcr -> (MD.PosInfo, Text) -> Either LocatedError Row
+parseRow :: [InstrumentAcr] -> (MD.PosInfo, Text) -> Either LocatedError Row
 parseRow is (pos@MD.PosInfo{startLine = rowSourceLine}, line) = do
     let ws = filter (\w -> not (Text.null w) && w /= "*") $ Text.words line
     notes <- mapM (parseNote is pos) ws
     return $ Row{rowSourceLine, notes}
 
-getRows :: HashSet InstrumentAcr -> MD.Node -> Either LocatedError [Row]
+getRows :: [InstrumentAcr] -> MD.Node -> Either LocatedError [Row]
 getRows is (MD.Node mpos (MD.CODE_BLOCK _ block) _) = do
     let pos = fromMaybe (oops "missing source location") mpos
     let ls = Text.lines block
@@ -215,7 +212,7 @@ getRows is (MD.Node mpos (MD.CODE_BLOCK _ block) _) = do
 getRows _ n = Left $ locatedError n "Expected code block."
 
 getSectionPatterns
-    :: HashSet InstrumentAcr
+    :: [InstrumentAcr]
     -> [((MD.PosInfo, Text), [MD.Node])]
     -> Either LocatedError [Pattern]
 getSectionPatterns _ [] = return []
@@ -249,7 +246,7 @@ getSectionPatterns is (((pos@MD.PosInfo{startLine}, patternTitle), nodes) : ss) 
     (pattern :) <$> getSectionPatterns is ss
 
 getTrackSections
-    :: HashSet InstrumentAcr
+    :: [InstrumentAcr]
     -> [((MD.PosInfo, Text), [MD.Node])]
     -> Either LocatedError [Section]
 getTrackSections _ [] = return []
@@ -270,7 +267,7 @@ mdToTrack (MD.Node _ typ nodes)
     | typ /= MD.DOCUMENT = oops $ toS $ unexpectedNodeType MD.DOCUMENT typ
     | otherwise = do
         config <- getTrackConfig intro
-        sections <- getTrackSections (HM.keysSet $ instruments config) h1s
+        sections <- getTrackSections (map fst $ instruments config) h1s
         return $ Track{config, sections}
   where
     (intro, h1s) = splitOn (either (const Nothing) Just . getHeading 1) nodes

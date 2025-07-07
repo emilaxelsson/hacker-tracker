@@ -73,7 +73,6 @@ library
         protolude,
         text,
         time,
-        unordered-containers,
         vty,
         vty-unix,
 
@@ -104,4 +103,3 @@ test-suite tests
                       hspec,
                       protolude,
                       QuickCheck,
-                      unordered-containers,

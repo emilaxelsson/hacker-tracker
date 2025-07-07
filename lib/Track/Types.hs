@@ -2,7 +2,6 @@ module Track.Types
     ( module Track.Types
     ) where
 
-import Data.HashMap.Strict (HashMap)
 import Protolude
 
 -- | Acronym representing an instrument in the tracker source
@@ -67,7 +66,7 @@ data Section = Section
 
 data TrackConfig = TrackConfig
     { bpm :: Int
-    , instruments :: HashMap InstrumentAcr InstrumentTarget
+    , instruments :: [(InstrumentAcr, InstrumentTarget)]
     }
     deriving stock (Show)
 

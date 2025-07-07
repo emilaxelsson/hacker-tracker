@@ -3,8 +3,6 @@
 module ParserSpec (spec) where
 
 import CMark (PosInfo (..))
-import Data.HashSet (HashSet)
-import Data.HashSet qualified as HS
 import Protolude
 import Test.Hspec
 import Test.Hspec.QuickCheck (prop)
@@ -14,8 +12,8 @@ import Track.Parser
 import Track.PrettyPrinter
 import Track.Types
 
-knownInstruments :: HashSet InstrumentAcr
-knownInstruments = HS.fromList ["AA", "BB", "CC", "DD"]
+knownInstruments :: [InstrumentAcr]
+knownInstruments = ["AA", "BB", "CC", "DD"]
 
 nullPos :: PosInfo
 nullPos = PosInfo 0 0 0 0
