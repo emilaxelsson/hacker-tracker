@@ -145,10 +145,10 @@ pitchParser = do
 
     return Pitch{noteName, octave}
 
-instrParser :: [InstrumentAcr] -> Parse.ReadP InstrumentAcr
+instrParser :: Maybe [InstrumentAcr] -> Parse.ReadP InstrumentAcr
 instrParser knownInstruments = do
     instr <- fmap (InstrumentAcr . Text.pack) $ Parse.munch1 $ \c -> c >= 'A' && c <= 'Z'
-    guard $ instr `elem` knownInstruments
+    guard $ maybe True (instr `elem`) knownInstruments
     return instr
 
 velocityParser :: Parse.ReadP Velocity
@@ -157,7 +157,7 @@ velocityParser = do
     Just v <- return $ readMaybe n
     return $ Velocity v
 
-noteParser :: [InstrumentAcr] -> Parse.ReadP Note
+noteParser :: Maybe [InstrumentAcr] -> Parse.ReadP Note
 noteParser knownInstruments = do
     instrument <- instrParser knownInstruments
 
@@ -182,12 +182,17 @@ noteParser knownInstruments = do
 
     withVelocityAndPitch Parse.<++ withVelocity Parse.<++ withPitch Parse.<++ onlyInstrument
 
-parseNote :: [InstrumentAcr] -> MD.PosInfo -> Text -> Either LocatedError Note
+parseNote :: Maybe [InstrumentAcr] -> MD.PosInfo -> Text -> Either LocatedError Note
 parseNote knownInstruments pos word = case Parse.readP_to_S (noteParser knownInstruments) $ Text.unpack word of
     [(note, "")] -> Right note
     _ -> Left (Just pos, "Cannot parse note: '" <> word <> "'")
 
-parseRow :: [InstrumentAcr] -> (MD.PosInfo, Text) -> Either LocatedError Row
+parseRow
+    :: Maybe [InstrumentAcr]
+    -- ^ List of configured instruments. If provided, only instruments from this list are
+    -- allowed.
+    -> (MD.PosInfo, Text)
+    -> Either LocatedError Row
 parseRow is (pos@MD.PosInfo{startLine = rowSourceLine}, line) = do
     let ws = filter (\w -> not (Text.null w) && w /= "*") $ Text.words line
     notes <- mapM (parseNote is pos) ws
@@ -208,7 +213,7 @@ getRows is (MD.Node mpos (MD.CODE_BLOCK _ block) _) = do
                         , MD.endColumn = Text.length line - 1
                         }
             ]
-    mapM (parseRow is) positionedLines
+    mapM (parseRow $ Just is) positionedLines
 getRows _ n = Left $ locatedError n "Expected code block."
 
 getSectionPatterns
