@@ -1,7 +1,7 @@
 cabal-version:      3.0
 name:               hacker-tracker
 version:            0.1
-synopsis:           Musical tracker for the hacker
+synopsis:           Music tracker for the hacker
 -- description:
 license:            BSD-3-Clause
 license-file:       LICENSE
