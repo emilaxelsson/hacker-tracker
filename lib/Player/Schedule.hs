@@ -8,14 +8,10 @@ module Player.Schedule
     ) where
 
 import Data.List.Zipper (Zipper, fromList)
+import Player.Config (PlayerConfig (..))
 import Protolude
 import Track.Types (BPM (..), Note (..), Resolution (..), Track (..))
 import Track.Types qualified as Track
-
-data PlayerConfig = PlayerConfig
-    { millisPerTick :: Int
-    }
-    deriving stock (Eq, Show)
 
 -- | Beat count from some reference point in the track (e.g. the start of the track)
 --

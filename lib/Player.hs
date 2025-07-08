@@ -2,11 +2,11 @@
 
 module Player
     ( player
-    , playerMillisPerTick
     ) where
 
 import Control.Arrow (Arrow (arr), (<<<), (>>>))
 import Data.Fixed (Fixed (MkFixed))
+import Player.Config (PlayerConfig (PlayerConfig, millisPerTick))
 import Protolude
 import Synch
     ( Event
@@ -21,12 +21,9 @@ import Synch.RefStore (RefStore)
 import TUI (AppEvent (..))
 import Time (prettyElapsedTime, secondsToElapsedTime)
 
-playerMillisPerTick :: Int
-playerMillisPerTick = 15
-
-reporter :: Monad m => SF m (Maybe Int) (Event AppEvent)
-reporter = arr $ fmap $ \ticks ->
-    let elapsedMillis = ticks * playerMillisPerTick
+reporter :: Monad m => PlayerConfig -> SF m (Maybe Int) (Event AppEvent)
+reporter PlayerConfig{millisPerTick} = arr $ fmap $ \ticks ->
+    let elapsedMillis = ticks * millisPerTick
         elapsedPretty =
             prettyElapsedTime $
                 secondsToElapsedTime $
@@ -45,8 +42,8 @@ pausablePlayer = proc running -> do
             else arr (const Nothing) -< ()
     latch Nothing -< ticks
 
-player :: RefStore m => SF m Bool (Event AppEvent)
-player = proc running -> do
+player :: RefStore m => PlayerConfig -> SF m Bool (Event AppEvent)
+player config = proc running -> do
     pos <- pausablePlayer -< running
     slowTick <- everyN 10 -< ()
     justPaused <- positiveEdge -< not running
@@ -55,4 +52,4 @@ player = proc running -> do
     -- tick or when the player was just paused. The application feels "laggy" if the UI is
     -- updated some time after the pause. That's why we update immediately on pause.
     let updateUI = slowTick <|> justPaused
-    arr join <<< onEvent reporter -< fmap (const pos) updateUI
+    arr join <<< onEvent (reporter config) -< fmap (const pos) updateUI

@@ -3,12 +3,19 @@ module Main (main) where
 import Brick.BChan (newBChan, writeBChan)
 import Control.Arrow ((>>>))
 import Data.IORef (newIORef, writeIORef)
-import Player (player, playerMillisPerTick)
+import Player (player)
+import Player.Schedule (PlayerConfig (..))
 import Protolude
 import Synch (action, onEvent, refInput, runSF)
 import Synch.System (execSystemForever)
 import TUI (PlayerCommand (..), trackerMain)
 import Track.Parser (parseTrack)
+
+playerConfig :: PlayerConfig
+playerConfig =
+    PlayerConfig
+        { millisPerTick = 15
+        }
 
 main :: IO ()
 main = do
@@ -20,10 +27,10 @@ main = do
 
     bracket
         ( forkIO $
-            execSystemForever playerMillisPerTick $
+            execSystemForever (millisPerTick playerConfig) $
                 runSF $
                     refInput runningRef
-                        >>> player
+                        >>> player playerConfig
                         >>> void (onEvent $ action $ writeBChan eventChan)
         )
         killThread
