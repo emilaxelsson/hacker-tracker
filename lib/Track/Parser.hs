@@ -86,10 +86,11 @@ getTrackConfig (n : _ : _) = Left $ locatedError n "Track config section should 
 getTrackConfig [config] = do
     cs <- getConfigItems parseTrackConfigItem config
 
-    bpm <- first (locatedError config) $ case [bpm | TrackConfigBPM bpm <- cs] of
-        [] -> Left "Missing BPM config."
-        _ : _ : _ -> Left "Multiple BPM configs."
-        [b] -> return b
+    bpm <- fmap BPM $
+        first (locatedError config) $ case [bpm | TrackConfigBPM bpm <- cs] of
+            [] -> Left "Missing BPM config."
+            _ : _ : _ -> Left "Multiple BPM configs."
+            [b] -> return b
 
     let instrAcrs = [acr | TrackConfigInstr acr _ <- cs]
     let dups = List.nub (instrAcrs List.\\ List.nub instrAcrs)
@@ -233,10 +234,11 @@ getSectionPatterns is (((pos@MD.PosInfo{startLine}, patternTitle), nodes) : ss) 
 
     cs <- getConfigItems parseSectionConfigItem config
 
-    resolution <- first (locatedError config) $ case [resolution | SectionConfigResolution resolution <- cs] of
-        [] -> Left "Missing resolution config."
-        _ : _ : _ -> Left "Multiple resolution configs."
-        [r] -> return r
+    resolution <- fmap Resolution $
+        first (locatedError config) $ case [resolution | SectionConfigResolution resolution <- cs] of
+            [] -> Left "Missing resolution config."
+            _ : _ : _ -> Left "Multiple resolution configs."
+            [r] -> return r
 
     rows <- getRows is patternNode
 

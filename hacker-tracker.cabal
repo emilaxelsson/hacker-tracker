@@ -56,6 +56,7 @@ library
     exposed-modules:
         Oops
         Player
+        Player.Schedule
         Synch.RefStore
         Synch.System
         Synch
@@ -70,6 +71,7 @@ library
         base < 5,
         brick,
         cmark,
+        ListZipper,
         protolude,
         text,
         time,

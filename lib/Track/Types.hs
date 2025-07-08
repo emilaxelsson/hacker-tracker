@@ -13,7 +13,14 @@ newtype InstrumentTarget = InstrumentTarget {unInstrumentTarget :: Int}
     deriving newtype (Show)
 
 newtype Velocity = Velocity {unVelocity :: Int}
-    deriving newtype (Eq, Show, Num)
+    deriving newtype (Eq, Ord, Show, Num, Enum, Real, Integral)
+
+-- | Number of pattern rows per beat
+newtype Resolution = Resolution {unResolution :: Int}
+    deriving newtype (Eq, Ord, Show, Num, Enum, Real, Integral)
+
+newtype BPM = BPM {unBPM :: Int}
+    deriving newtype (Eq, Ord, Show, Num, Enum, Real, Integral)
 
 data NoteName
     = A
@@ -52,8 +59,7 @@ data Row = Row
 data Pattern = Pattern
     { patternSourceLine :: Int
     , patternTitle :: Text
-    , resolution :: Int
-    -- ^ number of rows per beat
+    , resolution :: Resolution
     , rows :: [Row]
     }
     deriving stock (Show)
@@ -65,7 +71,7 @@ data Section = Section
     deriving stock (Show)
 
 data TrackConfig = TrackConfig
-    { bpm :: Int
+    { bpm :: BPM
     , instruments :: [(InstrumentAcr, InstrumentTarget)]
     }
     deriving stock (Show)
