@@ -17,10 +17,9 @@ data DocumentPart
     deriving stock (Show)
 
 mapCode :: ([Text] -> [Text]) -> [DocumentPart] -> [DocumentPart]
-mapCode f ps =
-    ps <&> \case
-        CodeBlock n ls -> CodeBlock n $ f ls
-        p -> p
+mapCode f = map $ \case
+    CodeBlock n ls -> CodeBlock n $ f ls
+    p -> p
 
 -- | Recognize a Markdown code block fence line and return its width
 --
