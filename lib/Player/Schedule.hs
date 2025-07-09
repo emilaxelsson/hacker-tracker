@@ -3,7 +3,6 @@ module Player.Schedule
     , Tick (..)
     , ScheduledRow (..)
     , PatternSchedule (..)
-    , TrackSchedule
     , scheduleTrack
     ) where
 
@@ -41,8 +40,6 @@ data PatternSchedule = PatternSchedule
     , notes :: [ScheduledRow]
     }
     deriving stock (Eq, Show)
-
-type TrackSchedule = Zipper PatternSchedule
 
 -- | Find the nearest tick for the given beat
 --
@@ -88,7 +85,7 @@ schedulePattern playerConfig Track.TrackConfig{bpm} beat Track.Pattern{patternTi
             }
 
 -- | The resulting 'Tick' is the length of the track plus one tick
-scheduleTrack :: PlayerConfig -> Track -> (Beat, TrackSchedule)
+scheduleTrack :: PlayerConfig -> Track -> (Beat, Zipper PatternSchedule)
 scheduleTrack playerConfig Track{config = trackConfig, sections} =
     second fromList $
         mapAccumL (schedulePattern playerConfig trackConfig) startBeat $
