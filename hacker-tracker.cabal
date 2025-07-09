@@ -72,7 +72,7 @@ library
         base < 5,
         brick,
         cmark,
-        ListZipper,
+        nonempty-zipper,
         protolude,
         text,
         time,

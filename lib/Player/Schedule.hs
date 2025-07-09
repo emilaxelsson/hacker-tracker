@@ -6,7 +6,7 @@ module Player.Schedule
     , scheduleTrack
     ) where
 
-import Data.List.Zipper (Zipper, fromList)
+import Data.List.NonEmpty.Zipper (Zipper, fromNonEmpty)
 import Player.Config (PlayerConfig (..))
 import Protolude
 import Track.Types (BPM (..), Note (..), Resolution (..), Track (..))
@@ -85,11 +85,13 @@ schedulePattern playerConfig Track.TrackConfig{bpm} beat Track.Pattern{patternTi
             }
 
 -- | The resulting 'Tick' is the length of the track plus one tick
-scheduleTrack :: PlayerConfig -> Track -> (Beat, Zipper PatternSchedule)
-scheduleTrack playerConfig Track{config = trackConfig, sections} =
-    second fromList $
-        mapAccumL (schedulePattern playerConfig trackConfig) startBeat $
-            concatMap Track.patterns sections
+scheduleTrack :: PlayerConfig -> Track -> Either Text (Beat, Zipper PatternSchedule)
+scheduleTrack playerConfig Track{config = trackConfig, sections} = do
+    let (beat, patterns) =
+            mapAccumL (schedulePattern playerConfig trackConfig) startBeat $
+                concatMap Track.patterns sections
+    nePatterns <- maybe (Left "Track has no patterns.") Right $ nonEmpty patterns
+    return (beat, fromNonEmpty nePatterns)
   where
     startBeat :: Beat
     startBeat = 0
