@@ -37,7 +37,7 @@ data ScheduledRow = ScheduledRow
 
 data PatternSchedule = PatternSchedule
     { patternTitle :: Text
-    , notes :: [ScheduledRow]
+    , rows :: [ScheduledRow]
     }
     deriving stock (Eq, Show)
 
@@ -81,7 +81,7 @@ schedulePattern playerConfig Track.TrackConfig{bpm} beat Track.Pattern{patternTi
     mkPatternSchedule scheduledRows =
         PatternSchedule
             { patternTitle
-            , notes = scheduledRows
+            , rows = scheduledRows
             }
 
 -- | The resulting 'Tick' is the length of the track plus one tick
