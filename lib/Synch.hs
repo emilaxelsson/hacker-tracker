@@ -143,7 +143,7 @@ delay init = SF $ do
 --
 -- >>> evalSF counter [False, False, True, True, False, True]
 -- [0,0,1,2,2,3]
-counter :: RefStore m => SF m Bool Int
+counter :: (RefStore m, Integral n) => SF m Bool n
 counter = SF $ do
     cnt <- newRef 0
     stream $ \tick -> do

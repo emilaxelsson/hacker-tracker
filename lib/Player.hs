@@ -7,6 +7,7 @@ module Player
 import Control.Arrow (Arrow (arr), (<<<), (>>>))
 import Data.Fixed (Fixed (MkFixed))
 import Player.Config (PlayerConfig (PlayerConfig, millisPerTick))
+import Player.Schedule (Tick)
 import Protolude
 import Synch
     ( Event
@@ -21,20 +22,17 @@ import Synch.RefStore (RefStore)
 import TUI (AppEvent (..))
 import Time (prettyElapsedTime, secondsToElapsedTime)
 
-reporter :: Monad m => PlayerConfig -> SF m (Maybe Int) (Event AppEvent)
+reporter :: Monad m => PlayerConfig -> SF m (Maybe Tick) (Event AppEvent)
 reporter PlayerConfig{millisPerTick} = arr $ fmap $ \ticks ->
-    let elapsedMillis = ticks * millisPerTick
-        elapsedPretty =
-            prettyElapsedTime $
-                secondsToElapsedTime $
-                    MkFixed $
-                        fromIntegral elapsedMillis
+    let elapsedMillis = fromIntegral ticks * millisPerTick
+        elapsedSeconds = secondsToElapsedTime $ MkFixed $ fromIntegral elapsedMillis
+        elapsedPretty = prettyElapsedTime elapsedSeconds
      in NowPlaying elapsedPretty
 
-player' :: RefStore m => SF m () Int
+player' :: RefStore m => SF m () Tick
 player' = arr (const True) >>> counter
 
-pausablePlayer :: RefStore m => SF m Bool (Maybe Int)
+pausablePlayer :: RefStore m => SF m Bool (Maybe Tick)
 pausablePlayer = proc running -> do
     ticks <-
         if running
