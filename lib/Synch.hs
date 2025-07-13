@@ -56,7 +56,7 @@ instance Monad m => Arrow (SF m) where
 instance Monad m => ArrowChoice (SF m) where
     left (SF init) = SF $ left <$> init
 
-instance (RefStore m, MonadFix m) => ArrowLoop (SF m) where
+instance MonadFix m => ArrowLoop (SF m) where
     loop (SF init) = SF $ loop <$> init
 
 -- | Run a synchronous stream transformer as a 'System'
