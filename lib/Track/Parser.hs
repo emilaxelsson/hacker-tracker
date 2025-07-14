@@ -219,7 +219,7 @@ getRows _ n = Left $ locatedError n "Expected code block."
 getSectionPatterns
     :: [InstrumentAcr]
     -> [((MD.PosInfo, Text), [MD.Node])]
-    -> Either LocatedError [Pattern]
+    -> Either LocatedError [Pattern []]
 getSectionPatterns _ [] = return []
 getSectionPatterns is (((pos@MD.PosInfo{startLine}, patternTitle), nodes) : ss) = do
     (config, patternNode) <- case nodes of

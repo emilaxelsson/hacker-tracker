@@ -7,7 +7,6 @@ module Player.Schedule
     ) where
 
 import Data.List.NonEmpty.Zipper (Zipper, fromNonEmpty)
-import Oops
 import Player.Config (PlayerConfig (..))
 import Protolude
 import Track.Types (BPM (..), Note (..), Resolution (..), SourceLine (..), Track (..))
@@ -68,20 +67,22 @@ scheduleRow config bpm resolution beat Track.Row{rowSourceLine, notes} =
     at = beatToTick config bpm beat
     scheduledRow = ScheduledRow{at, rowSourceLine, notes}
 
+nonEmptyPattern :: Track.Pattern [] -> Maybe (Track.Pattern NonEmpty)
+nonEmptyPattern pat@Track.Pattern{rows} =
+    nonEmpty rows
+        <&> \rs -> pat{Track.rows = rs}
+
 schedulePattern
     :: PlayerConfig
     -> Track.TrackConfig
     -> Beat
     -- ^ The beat on which the pattern starts
-    -> Track.Pattern
+    -> Track.Pattern NonEmpty
     -> (Beat, PatternSchedule)
     -- ^ The beat on which the next pattern starts
 schedulePattern playerConfig Track.TrackConfig{bpm} beat Track.Pattern{patternTitle, resolution, rows} =
     second mkPatternSchedule $
-        mapAccumL
-            (scheduleRow playerConfig bpm resolution)
-            beat
-            (fromMaybe (oops "TODO") $ nonEmpty rows)
+        mapAccumL (scheduleRow playerConfig bpm resolution) beat rows
   where
     mkPatternSchedule scheduledRows =
         PatternSchedule
@@ -92,11 +93,14 @@ schedulePattern playerConfig Track.TrackConfig{bpm} beat Track.Pattern{patternTi
 -- | The resulting 'Tick' is the length of the track plus one tick
 scheduleTrack :: PlayerConfig -> Track -> Either Text (Zipper PatternSchedule)
 scheduleTrack playerConfig Track{config = trackConfig, sections} = do
+    trackPatterns <-
+        maybe (Left "Track has no patterns.") Right $
+            nonEmpty $
+                concatMap (mapMaybe nonEmptyPattern . Track.patterns) sections
     let (_, patterns) =
             mapAccumL (schedulePattern playerConfig trackConfig) startBeat $
-                concatMap Track.patterns sections
-    nePatterns <- maybe (Left "Track has no patterns.") Right $ nonEmpty patterns
-    return $ fromNonEmpty nePatterns
+                trackPatterns
+    return $ fromNonEmpty patterns
   where
     startBeat :: Beat
     startBeat = 0

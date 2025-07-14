@@ -1,3 +1,5 @@
+{-# LANGUAGE UndecidableInstances #-}
+
 module Track.Types where
 
 import Protolude
@@ -58,17 +60,18 @@ data Row = Row
     }
     deriving stock (Show)
 
-data Pattern = Pattern
+data Pattern f = Pattern
     { patternSourceLine :: Int
     , patternTitle :: Text
     , resolution :: Resolution
-    , rows :: [Row]
+    , rows :: f Row
     }
-    deriving stock (Show)
+
+deriving stock instance Show (f Row) => Show (Pattern f)
 
 data Section = Section
     { sectionTitle :: Text
-    , patterns :: [Pattern]
+    , patterns :: [Pattern []]
     }
     deriving stock (Show)
 
