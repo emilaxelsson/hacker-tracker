@@ -193,10 +193,10 @@ parseRow
     -- allowed.
     -> (MD.PosInfo, Text)
     -> Either LocatedError Row
-parseRow is (pos@MD.PosInfo{startLine = rowSourceLine}, line) = do
+parseRow is (pos@MD.PosInfo{startLine}, line) = do
     let ws = filter (\w -> not (Text.null w) && w /= "*") $ Text.words line
     notes <- mapM (parseNote is pos) ws
-    return $ Row{rowSourceLine, notes}
+    return $ Row{rowSourceLine = fromIntegral startLine, notes}
 
 getRows :: [InstrumentAcr] -> MD.Node -> Either LocatedError [Row]
 getRows is (MD.Node mpos (MD.CODE_BLOCK _ block) _) = do

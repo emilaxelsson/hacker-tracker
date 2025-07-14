@@ -90,6 +90,7 @@ executable hacker-tracker
                       brick,
                       hacker-tracker,
                       protolude,
+                      text,
 
 executable align-tracks
     import:           warnings

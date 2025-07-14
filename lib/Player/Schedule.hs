@@ -7,9 +7,10 @@ module Player.Schedule
     ) where
 
 import Data.List.NonEmpty.Zipper (Zipper, fromNonEmpty)
+import Oops
 import Player.Config (PlayerConfig (..))
 import Protolude
-import Track.Types (BPM (..), Note (..), Resolution (..), Track (..))
+import Track.Types (BPM (..), Note (..), Resolution (..), SourceLine (..), Track (..))
 import Track.Types qualified as Track
 
 -- | Beat count from some reference point in the track (e.g. the start of the track)
@@ -30,14 +31,14 @@ newtype Tick = Tick {unTick :: Int}
 
 data ScheduledRow = ScheduledRow
     { at :: Tick
-    , rowSourceLine :: Int
+    , rowSourceLine :: SourceLine
     , notes :: [Note]
     }
     deriving stock (Eq, Show)
 
 data PatternSchedule = PatternSchedule
     { patternTitle :: Text
-    , rows :: [ScheduledRow]
+    , rows :: NonEmpty ScheduledRow
     }
     deriving stock (Eq, Show)
 
@@ -76,7 +77,11 @@ schedulePattern
     -> (Beat, PatternSchedule)
     -- ^ The beat on which the next pattern starts
 schedulePattern playerConfig Track.TrackConfig{bpm} beat Track.Pattern{patternTitle, resolution, rows} =
-    second mkPatternSchedule $ mapAccumL (scheduleRow playerConfig bpm resolution) beat rows
+    second mkPatternSchedule $
+        mapAccumL
+            (scheduleRow playerConfig bpm resolution)
+            beat
+            (fromMaybe (oops "TODO") $ nonEmpty rows)
   where
     mkPatternSchedule scheduledRows =
         PatternSchedule
@@ -85,13 +90,13 @@ schedulePattern playerConfig Track.TrackConfig{bpm} beat Track.Pattern{patternTi
             }
 
 -- | The resulting 'Tick' is the length of the track plus one tick
-scheduleTrack :: PlayerConfig -> Track -> Either Text (Beat, Zipper PatternSchedule)
+scheduleTrack :: PlayerConfig -> Track -> Either Text (Zipper PatternSchedule)
 scheduleTrack playerConfig Track{config = trackConfig, sections} = do
-    let (beat, patterns) =
+    let (_, patterns) =
             mapAccumL (schedulePattern playerConfig trackConfig) startBeat $
                 concatMap Track.patterns sections
     nePatterns <- maybe (Left "Track has no patterns.") Right $ nonEmpty patterns
-    return (beat, fromNonEmpty nePatterns)
+    return $ fromNonEmpty nePatterns
   where
     startBeat :: Beat
     startBeat = 0

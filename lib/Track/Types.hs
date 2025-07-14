@@ -1,8 +1,10 @@
-module Track.Types
-    ( module Track.Types
-    ) where
+module Track.Types where
 
 import Protolude
+
+-- | The position of a line in the source code, starting from 1
+newtype SourceLine = SourceLine {unSourceLine :: Int}
+    deriving newtype (Eq, Ord, Show, Num, Enum, Real, Integral)
 
 -- | Acronym representing an instrument in the tracker source
 newtype InstrumentAcr = InstrumentAcr {unInstrumentAcr :: Text}
@@ -51,7 +53,7 @@ data Note = Note
     deriving stock (Eq, Show, Generic)
 
 data Row = Row
-    { rowSourceLine :: Int
+    { rowSourceLine :: SourceLine
     , notes :: [Note]
     }
     deriving stock (Show)
