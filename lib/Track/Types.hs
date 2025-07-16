@@ -14,7 +14,7 @@ newtype InstrumentAcr = InstrumentAcr {unInstrumentAcr :: Text}
 
 -- | Instrument number in the target output
 newtype InstrumentTarget = InstrumentTarget {unInstrumentTarget :: Int}
-    deriving newtype (Show)
+    deriving newtype (Eq, Ord, Show, Num, Enum, Real, Integral)
 
 newtype Velocity = Velocity {unVelocity :: Int}
     deriving newtype (Eq, Ord, Show, Num, Enum, Real, Integral)
@@ -27,10 +27,7 @@ newtype BPM = BPM {unBPM :: Int}
     deriving newtype (Eq, Ord, Show, Num, Enum, Real, Integral)
 
 data NoteName
-    = A
-    | As
-    | B
-    | C
+    = C
     | Cs
     | D
     | Ds
@@ -39,11 +36,16 @@ data NoteName
     | Fs
     | G
     | Gs
+    | A
+    | As
+    | B
     deriving stock (Eq, Show, Enum, Bounded)
 
 data Pitch = Pitch
     { noteName :: NoteName
     , octave :: Maybe Int
+    -- ^ Relative to the \"default octave\" for the target player. 'Nothing' means the
+    -- same as 0.
     }
     deriving stock (Eq, Show, Generic)
 

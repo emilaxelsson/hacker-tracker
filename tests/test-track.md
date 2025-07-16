@@ -2,7 +2,7 @@
 * instr:  HH 2
 * instr:  KD 4
 * instr:  SD 5
-* instr:  BA 13
+* instr:  BA 15
 
 
 
@@ -14,11 +14,11 @@ Chorus 1
 * resolution: 4
 
 ````````````````````````````````````
-HH-60   KD-75   *       BA-50-C#4
+HH-60   KD-75   *       BA-50-C#
 *       *       *       *
-*       *       *       BA-50-E4
+*       *       *       BA-50-E
 *       *       *       *
-HH-60   *       *       BA-50-C#4
+HH-60   *       *       BA-50-C#0
 *       *       *       *
 *       *       *       *
 *       *       *       *

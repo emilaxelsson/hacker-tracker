@@ -55,6 +55,7 @@ library
     hs-source-dirs:   lib
 
     exposed-modules:
+        Midi
         Oops
         Player
         Player.Config
@@ -75,8 +76,11 @@ library
         cmark,
         nonempty-zipper,
         protolude,
+        RtMidi,
         text,
         time,
+        unordered-containers,
+        vector,
         vty,
         vty-unix,
 
@@ -91,7 +95,10 @@ executable hacker-tracker
                       brick,
                       hacker-tracker,
                       protolude,
+                      RtMidi,
                       text,
+                      unordered-containers,
+                      vector,
 
 executable align-tracks
     import:           warnings

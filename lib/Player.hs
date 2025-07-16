@@ -26,7 +26,7 @@ import Synch
 import Synch.RefStore (RefStore)
 import TUI (AppEvent (..))
 import Time (prettyElapsedTime, secondsToElapsedTime)
-import Track.Types (SourceLine)
+import Track.Types (Note, SourceLine)
 
 data PlayerState = PlayerState
     { tick :: Tick
@@ -88,7 +88,7 @@ player
     :: (MonadFix m, RefStore m)
     => PlayerConfig
     -> Zipper PatternSchedule
-    -> SF m Bool (Event AppEvent)
+    -> SF m Bool (Event AppEvent, Event [Note])
 player config schedule = proc running -> do
     (ticks, sourceLine, evRow) <- pausablePlayer initialState -< running
     slowTick <- everyN 10 -< ()
@@ -98,7 +98,9 @@ player config schedule = proc running -> do
     -- tick or when the player was just paused. The application feels "laggy" if the UI is
     -- updated some time after the pause. That's why we update immediately on pause.
     let updateUI = slowTick <|> justPaused
-    onEvent (arr (uncurry $ reporter config)) -< fmap (const (ticks, sourceLine)) updateUI
+    appEvent <-
+        onEvent (arr $ uncurry $ reporter config) -< fmap (const (ticks, sourceLine)) updateUI
+    arr identity -< (appEvent, notes <$> evRow)
   where
     initialState =
         PlayerState
