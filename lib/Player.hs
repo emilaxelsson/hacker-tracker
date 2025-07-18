@@ -13,6 +13,7 @@ import Data.List.NonEmpty.Zipper qualified as Z
 import Data.Text qualified as Text
 import Player.Config (PlayerConfig (..))
 import Player.Schedule (PatternSchedule (..), ScheduledRow (..), Tick)
+import Player.Schedule qualified as Schedule
 import Protolude
 import Synch
     ( Event
@@ -26,7 +27,7 @@ import Synch
 import Synch.RefStore (RefStore)
 import TUI (AppEvent (..))
 import Time (prettyElapsedTime, secondsToElapsedTime)
-import Track.Types (Note, SourceLine)
+import Track.Types (SourceLine)
 
 data PlayerState = PlayerState
     { tick :: Tick
@@ -88,7 +89,7 @@ player
     :: (MonadFix m, RefStore m)
     => PlayerConfig
     -> Zipper PatternSchedule
-    -> SF m Bool (Event AppEvent, Event [Note])
+    -> SF m Bool (Event AppEvent, Event [Schedule.Note])
 player config schedule = proc running -> do
     (ticks, sourceLine, evRow) <- pausablePlayer initialState -< running
     slowTick <- everyN 10 -< ()
@@ -100,7 +101,7 @@ player config schedule = proc running -> do
     let updateUI = slowTick <|> justPaused
     appEvent <-
         onEvent (arr $ uncurry $ reporter config) -< fmap (const (ticks, sourceLine)) updateUI
-    arr identity -< (appEvent, notes <$> evRow)
+    arr identity -< (appEvent, Schedule.notes <$> evRow)
   where
     initialState =
         PlayerState

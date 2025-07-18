@@ -98,7 +98,6 @@ executable hacker-tracker
                       RtMidi,
                       text,
                       unordered-containers,
-                      vector,
 
 executable align-tracks
     import:           warnings

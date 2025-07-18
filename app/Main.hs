@@ -56,9 +56,9 @@ main = do
     track <- readFile path
     ast@Track{config = TrackConfig{instruments}} <-
         either (fail . show) return $ parseTrack track
-    schedule <- either (fail . Text.unpack) return $ scheduleTrack playerConfig ast
-
     let instrumentMap = HM.fromList instruments
+    schedule <-
+        either (fail . Text.unpack) return $ scheduleTrack playerConfig instrumentMap ast
 
     print ast
     print schedule
@@ -66,7 +66,7 @@ main = do
     eventChan <- newBChan 1
     runningRef <- newIORef False
 
-    let playNotes = mapM $ playNote instrumentMap device
+    let playNotes = mapM $ playNote device
 
     bracket
         ( forkIO $
