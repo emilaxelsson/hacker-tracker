@@ -8,7 +8,7 @@ import Protolude
 import System.FilePath (takeExtension)
 import Track.Parser
 import Track.PrettyPrinter (prettyNote)
-import Track.Types
+import Track.AST
 import Prelude (fail)
 
 data DocumentPart

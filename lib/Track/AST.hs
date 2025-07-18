@@ -1,6 +1,6 @@
 {-# LANGUAGE UndecidableInstances #-}
 
-module Track.Types where
+module Track.AST where
 
 import Protolude
 

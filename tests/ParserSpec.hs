@@ -11,7 +11,7 @@ import Test.QuickCheck (Arbitrary, Property, arbitrary, (===))
 import Test.QuickCheck qualified as Q
 import Track.Parser
 import Track.PrettyPrinter
-import Track.Types
+import Track.AST
 
 nullPos :: PosInfo
 nullPos = PosInfo 0 0 0 0

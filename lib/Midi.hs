@@ -6,7 +6,7 @@ import Data.Vector.Storable qualified as Vector
 import Player.Schedule (Note (..))
 import Protolude
 import Sound.RtMidi (OutputDevice, sendMessage)
-import Track.Types (Pitch (..))
+import Track.AST (Pitch (..))
 
 -- | Convert a 'Pitch' to a MIDI note number
 --

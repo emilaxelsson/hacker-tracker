@@ -27,7 +27,7 @@ import Synch
 import Synch.RefStore (RefStore)
 import TUI (AppEvent (..))
 import Time (prettyElapsedTime, secondsToElapsedTime)
-import Track.Types (SourceLine)
+import Track.AST (SourceLine)
 
 data PlayerState = PlayerState
     { tick :: Tick

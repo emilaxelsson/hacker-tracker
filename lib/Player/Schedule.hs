@@ -13,7 +13,7 @@ import Data.List.NonEmpty.Zipper (Zipper, fromNonEmpty)
 import Oops (oops)
 import Player.Config (PlayerConfig (..))
 import Protolude
-import Track.Types
+import Track.AST
     ( BPM (..)
     , InstrumentAcr
     , InstrumentTarget
@@ -24,7 +24,7 @@ import Track.Types
     , Track (..)
     , Velocity
     )
-import Track.Types qualified as Track
+import Track.AST qualified as AST
 
 -- | Beat count from some reference point in the track (e.g. the start of the track)
 --
@@ -72,8 +72,8 @@ beatToTick PlayerConfig{millisPerTick} bpm beat =
     millisPerBeat = 60_000 / fromIntegral bpm
     millis = beat * fromRational millisPerBeat
 
-interpretNote :: HashMap InstrumentAcr InstrumentTarget -> Track.Note -> Note
-interpretNote instrumentMap Track.Note{instrument, velocity, pitch} =
+interpretNote :: HashMap InstrumentAcr InstrumentTarget -> AST.Note -> Note
+interpretNote instrumentMap AST.Note{instrument, velocity, pitch} =
     Note
         { instrument = fromMaybe (oops "should not happen") $ HM.lookup instrument instrumentMap
         , velocity = fromMaybe defaultVelocity velocity
@@ -91,10 +91,10 @@ scheduleRow
     -> HashMap InstrumentAcr InstrumentTarget
     -> Beat
     -- ^ The beat on which the row starts
-    -> Track.Row
+    -> AST.Row
     -> (Beat, ScheduledRow)
     -- ^ The beat on which the next row starts
-scheduleRow config bpm resolution instrumentMap beat Track.Row{rowSourceLine, notes} =
+scheduleRow config bpm resolution instrumentMap beat AST.Row{rowSourceLine, notes} =
     (beat', scheduledRow)
   where
     beat' = beat + 1 / fromIntegral resolution
@@ -105,21 +105,21 @@ scheduleRow config bpm resolution instrumentMap beat Track.Row{rowSourceLine, no
             , notes = map (interpretNote instrumentMap) notes
             }
 
-nonEmptyPattern :: Track.Pattern [] -> Maybe (Track.Pattern NonEmpty)
-nonEmptyPattern pat@Track.Pattern{rows} =
+nonEmptyPattern :: AST.Pattern [] -> Maybe (AST.Pattern NonEmpty)
+nonEmptyPattern pat@AST.Pattern{rows} =
     nonEmpty rows
-        <&> \rs -> pat{Track.rows = rs}
+        <&> \rs -> pat{AST.rows = rs}
 
 schedulePattern
     :: PlayerConfig
-    -> Track.TrackConfig
+    -> AST.TrackConfig
     -> HashMap InstrumentAcr InstrumentTarget
     -> Beat
     -- ^ The beat on which the pattern starts
-    -> Track.Pattern NonEmpty
+    -> AST.Pattern NonEmpty
     -> (Beat, PatternSchedule)
     -- ^ The beat on which the next pattern starts
-schedulePattern playerConfig Track.TrackConfig{bpm} instrumentMap beat Track.Pattern{patternTitle, resolution, rows} =
+schedulePattern playerConfig AST.TrackConfig{bpm} instrumentMap beat AST.Pattern{patternTitle, resolution, rows} =
     second mkPatternSchedule $
         mapAccumL (scheduleRow playerConfig bpm resolution instrumentMap) beat rows
   where
@@ -139,7 +139,7 @@ scheduleTrack playerConfig instrumentMap Track{config = trackConfig, sections} =
     trackPatterns <-
         maybe (Left "Track has no patterns.") Right $
             nonEmpty $
-                concatMap (mapMaybe nonEmptyPattern . Track.patterns) sections
+                concatMap (mapMaybe nonEmptyPattern . AST.patterns) sections
     let (_, patterns) =
             mapAccumL (schedulePattern playerConfig trackConfig instrumentMap) startBeat $
                 trackPatterns

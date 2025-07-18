@@ -12,7 +12,7 @@ import Data.Text qualified as Text
 import Oops
 import Protolude hiding (note)
 import Text.ParserCombinators.ReadP qualified as Parse
-import Track.Types
+import Track.AST
 import Utils
 
 type LocatedError = (Maybe MD.PosInfo, Text)

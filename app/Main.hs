@@ -24,7 +24,7 @@ import Synch (action, onEvent, refInput, runSF)
 import Synch.System (execSystemForever)
 import TUI (PlayerCommand (..), trackerMain)
 import Track.Parser (parseTrack)
-import Track.Types (Track (..), TrackConfig (..))
+import Track.AST (Track (..), TrackConfig (..))
 
 selectMidiPort :: IO OutputDevice
 selectMidiPort = do

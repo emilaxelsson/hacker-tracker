@@ -5,7 +5,7 @@ module Track.PrettyPrinter
 
 import Data.Text qualified as Text
 import Protolude
-import Track.Types
+import Track.AST
 
 -- |
 -- >>> prettyPitch (Pitch Cs Nothing)
