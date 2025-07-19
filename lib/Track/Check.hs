@@ -2,15 +2,15 @@ module Track.Check
     ( checkPatterns
     ) where
 
-import Protolude
-import Track.AST (Pattern (..), Section (..), Track (..))
+import Protolude hiding (note)
+import Track.AST (Note, Pattern (..), Section (..), Track (..))
 
-nonEmptyPattern :: Pattern [] -> Maybe (Pattern NonEmpty)
+nonEmptyPattern :: Pattern [] note -> Maybe (Pattern NonEmpty note)
 nonEmptyPattern pat@Pattern{rows} =
     nonEmpty rows
         <&> \rs -> pat{rows = rs}
 
-checkPatterns :: Track -> Either Text (NonEmpty (Pattern NonEmpty))
+checkPatterns :: Track -> Either Text (NonEmpty (Pattern NonEmpty Note))
 checkPatterns Track{sections} =
     maybe (Left "Track has no patterns.") Right $
         nonEmpty $

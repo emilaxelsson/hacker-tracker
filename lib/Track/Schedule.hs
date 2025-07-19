@@ -99,7 +99,7 @@ scheduleRow
     -> HashMap InstrumentAcr InstrumentTarget
     -> Beat
     -- ^ The beat on which the row starts
-    -> AST.Row
+    -> AST.Row AST.Note
     -> (Beat, Row)
     -- ^ The beat on which the next row starts
 scheduleRow config bpm resolution instrumentMap beat AST.Row{rowSourceLine, notes} =
@@ -119,7 +119,7 @@ schedulePattern
     -> HashMap InstrumentAcr InstrumentTarget
     -> Beat
     -- ^ The beat on which the pattern starts
-    -> AST.Pattern NonEmpty
+    -> AST.Pattern NonEmpty AST.Note
     -> (Beat, Pattern)
     -- ^ The beat on which the next pattern starts
 schedulePattern playerConfig AST.TrackConfig{bpm} instrumentMap beat AST.Pattern{patternTitle, resolution, rows} =

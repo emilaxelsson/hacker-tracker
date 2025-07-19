@@ -181,7 +181,8 @@ noteParser knownInstruments = do
 
     withVelocityAndPitch Parse.<++ withVelocity Parse.<++ withPitch Parse.<++ onlyInstrument
 
-parseNote :: Maybe [InstrumentAcr] -> MD.PosInfo -> Text -> Either LocatedError Note
+parseNote
+    :: Maybe [InstrumentAcr] -> MD.PosInfo -> Text -> Either LocatedError Note
 parseNote knownInstruments pos word =
     case Parse.readP_to_S (noteParser knownInstruments) $ Text.unpack word of
         [(note, "")] -> Right note
@@ -192,13 +193,13 @@ parseRow
     -- ^ List of configured instruments. If provided, only instruments from this list are
     -- allowed.
     -> (MD.PosInfo, Text)
-    -> Either LocatedError Row
+    -> Either LocatedError (Row Note)
 parseRow is (pos@MD.PosInfo{startLine}, line) = do
     let ws = filter (\w -> not (Text.null w) && w /= "*") $ Text.words line
     notes <- mapM (parseNote is pos) ws
     return $ Row{rowSourceLine = fromIntegral startLine, notes}
 
-getRows :: [InstrumentAcr] -> MD.Node -> Either LocatedError [Row]
+getRows :: [InstrumentAcr] -> MD.Node -> Either LocatedError [Row Note]
 getRows is (MD.Node mpos (MD.CODE_BLOCK _ block) _) = do
     let pos = fromMaybe (oops "missing source location") mpos
     let ls = Text.lines block
@@ -219,7 +220,7 @@ getRows _ n = Left $ locatedError n "Expected code block."
 getSectionPatterns
     :: [InstrumentAcr]
     -> [((MD.PosInfo, Text), [MD.Node])]
-    -> Either LocatedError [Pattern []]
+    -> Either LocatedError [Pattern [] Note]
 getSectionPatterns _ [] = return []
 getSectionPatterns is (((pos@MD.PosInfo{startLine}, patternTitle), nodes) : ss) = do
     (config, patternNode) <- case nodes of
