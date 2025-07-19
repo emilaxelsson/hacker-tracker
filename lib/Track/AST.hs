@@ -16,6 +16,7 @@ newtype InstrumentAcr = InstrumentAcr {unInstrumentAcr :: Text}
 newtype InstrumentTarget = InstrumentTarget {unInstrumentTarget :: Int}
     deriving newtype (Eq, Ord, Show, Num, Enum, Real, Integral)
 
+-- | A value in the range [0, 100]
 newtype Velocity = Velocity {unVelocity :: Int}
     deriving newtype (Eq, Ord, Show, Num, Enum, Real, Integral)
 

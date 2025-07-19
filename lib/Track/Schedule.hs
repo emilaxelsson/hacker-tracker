@@ -1,3 +1,4 @@
+-- | A schedule can be seen as a compiled track
 module Track.Schedule
     ( PlayerConfig (..)
     , Tick (..)
@@ -64,7 +65,7 @@ data PatternSchedule = PatternSchedule
 
 -- | Find the nearest tick for the given beat
 --
--- Ticks and beats are counted from the same reference point
+-- Ticks and beats are interpreted as relative to a common reference point.
 beatToTick :: PlayerConfig -> BPM -> Beat -> Tick
 beatToTick PlayerConfig{millisPerTick} bpm beat =
     round $ millis / fromIntegral millisPerTick
@@ -72,17 +73,21 @@ beatToTick PlayerConfig{millisPerTick} bpm beat =
     millisPerBeat = 60_000 / fromIntegral bpm
     millis = beat * fromRational millisPerBeat
 
-interpretNote :: HashMap InstrumentAcr InstrumentTarget -> AST.Note -> Note
-interpretNote instrumentMap AST.Note{instrument, velocity, pitch} =
+defaultVelocity :: Velocity
+defaultVelocity = 80
+
+defaultPitch :: Pitch
+defaultPitch = Pitch C Nothing
+
+compileNote :: HashMap InstrumentAcr InstrumentTarget -> AST.Note -> Note
+compileNote instrumentMap AST.Note{instrument, velocity, pitch} =
     Note
-        { instrument = fromMaybe (oops "should not happen") $ HM.lookup instrument instrumentMap
+        { -- The parser has already checked that the track doesn't refer to undefined instruments
+          -- TODO Move this check out of the parser
+          instrument = fromMaybe (oops "should not happen") $ HM.lookup instrument instrumentMap
         , velocity = fromMaybe defaultVelocity velocity
         , pitch = fromMaybe defaultPitch pitch
         }
-  where
-    defaultVelocity :: Velocity
-    defaultVelocity = 80
-    defaultPitch = Pitch C Nothing
 
 scheduleRow
     :: PlayerConfig
@@ -102,7 +107,7 @@ scheduleRow config bpm resolution instrumentMap beat AST.Row{rowSourceLine, note
         ScheduledRow
             { at = beatToTick config bpm beat
             , rowSourceLine
-            , notes = map (interpretNote instrumentMap) notes
+            , notes = map (compileNote instrumentMap) notes
             }
 
 nonEmptyPattern :: AST.Pattern [] -> Maybe (AST.Pattern NonEmpty)
