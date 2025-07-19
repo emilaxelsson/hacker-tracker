@@ -2,7 +2,7 @@
 
 module Track.AST where
 
-import Protolude
+import Protolude hiding (note)
 
 -- | The position of a line in the source code, starting from 1
 newtype SourceLine = SourceLine {unSourceLine :: Int}
@@ -57,24 +57,24 @@ data Note = Note
     }
     deriving stock (Eq, Show, Generic)
 
-data Row = Row
+data Row note = Row
     { rowSourceLine :: SourceLine
-    , notes :: [Note]
+    , notes :: [note]
     }
     deriving stock (Show)
 
-data Pattern f = Pattern
+data Pattern f note = Pattern
     { patternSourceLine :: Int
     , patternTitle :: Text
     , resolution :: Resolution
-    , rows :: f Row
+    , rows :: f (Row note)
     }
 
-deriving stock instance Show (f Row) => Show (Pattern f)
+deriving stock instance Show (f (Row note)) => Show (Pattern f note)
 
 data Section = Section
     { sectionTitle :: Text
-    , patterns :: [Pattern []]
+    , patterns :: [Pattern [] Note]
     }
     deriving stock (Show)
 
