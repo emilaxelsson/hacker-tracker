@@ -9,9 +9,9 @@ import Test.Hspec
 import Test.Hspec.QuickCheck (prop)
 import Test.QuickCheck (Arbitrary, Property, arbitrary, (===))
 import Test.QuickCheck qualified as Q
+import Track.AST
 import Track.Parser
 import Track.PrettyPrinter
-import Track.AST
 
 nullPos :: PosInfo
 nullPos = PosInfo 0 0 0 0

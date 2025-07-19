@@ -6,9 +6,9 @@ import Data.Text qualified as Text
 import Oops
 import Protolude
 import System.FilePath (takeExtension)
+import Track.AST
 import Track.Parser
 import Track.PrettyPrinter (prettyNote)
-import Track.AST
 import Prelude (fail)
 
 data DocumentPart

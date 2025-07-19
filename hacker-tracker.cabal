@@ -59,14 +59,14 @@ library
         Oops
         Player
         Player.Config
-        Player.Schedule
         Synch.RefStore
         Synch.System
         Synch
         Time
+        Track.AST
         Track.Parser
         Track.PrettyPrinter
-        Track.AST
+        Track.Schedule
         TUI
         Utils
 

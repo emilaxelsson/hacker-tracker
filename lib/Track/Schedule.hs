@@ -1,4 +1,4 @@
-module Player.Schedule
+module Track.Schedule
     ( PlayerConfig (..)
     , Tick (..)
     , Note (..)

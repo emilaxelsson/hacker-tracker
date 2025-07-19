@@ -10,7 +10,6 @@ import Data.Text qualified as Text
 import GHC.IO.Handle (hFlush)
 import Midi (playNote)
 import Player (player)
-import Player.Schedule (PlayerConfig (..), scheduleTrack)
 import Protolude
 import Sound.RtMidi
     ( OutputDevice
@@ -23,8 +22,9 @@ import Sound.RtMidi
 import Synch (action, onEvent, refInput, runSF)
 import Synch.System (execSystemForever)
 import TUI (PlayerCommand (..), trackerMain)
-import Track.Parser (parseTrack)
 import Track.AST (Track (..), TrackConfig (..))
+import Track.Parser (parseTrack)
+import Track.Schedule (PlayerConfig (..), scheduleTrack)
 
 selectMidiPort :: IO OutputDevice
 selectMidiPort = do

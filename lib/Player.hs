@@ -12,8 +12,6 @@ import Data.List.NonEmpty.Zipper (Zipper)
 import Data.List.NonEmpty.Zipper qualified as Z
 import Data.Text qualified as Text
 import Player.Config (PlayerConfig (..))
-import Player.Schedule (PatternSchedule (..), ScheduledRow (..), Tick)
-import Player.Schedule qualified as Schedule
 import Protolude
 import Synch
     ( Event
@@ -28,6 +26,8 @@ import Synch.RefStore (RefStore)
 import TUI (AppEvent (..))
 import Time (prettyElapsedTime, secondsToElapsedTime)
 import Track.AST (SourceLine)
+import Track.Schedule (PatternSchedule (..), ScheduledRow (..), Tick)
+import Track.Schedule qualified as Schedule
 
 data PlayerState = PlayerState
     { tick :: Tick
