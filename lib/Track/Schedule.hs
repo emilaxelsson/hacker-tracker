@@ -3,8 +3,9 @@ module Track.Schedule
     ( PlayerConfig (..)
     , Tick (..)
     , Note (..)
-    , ScheduledRow (..)
-    , PatternSchedule (..)
+    , Row (..)
+    , Pattern (..)
+    , Track
     , scheduleTrack
     ) where
 
@@ -22,7 +23,6 @@ import Track.AST
     , Pitch (..)
     , Resolution (..)
     , SourceLine (..)
-    , Track (..)
     , Velocity
     )
 import Track.AST qualified as AST
@@ -50,18 +50,20 @@ data Note = Note
     }
     deriving stock (Eq, Show)
 
-data ScheduledRow = ScheduledRow
+data Row = Row
     { at :: Tick
     , rowSourceLine :: SourceLine
     , notes :: [Note]
     }
     deriving stock (Eq, Show)
 
-data PatternSchedule = PatternSchedule
+data Pattern = Pattern
     { patternTitle :: Text
-    , rows :: NonEmpty ScheduledRow
+    , rows :: NonEmpty Row
     }
     deriving stock (Eq, Show)
+
+type Track = Zipper Pattern
 
 -- | Find the nearest tick for the given beat
 --
@@ -97,14 +99,14 @@ scheduleRow
     -> Beat
     -- ^ The beat on which the row starts
     -> AST.Row
-    -> (Beat, ScheduledRow)
+    -> (Beat, Row)
     -- ^ The beat on which the next row starts
 scheduleRow config bpm resolution instrumentMap beat AST.Row{rowSourceLine, notes} =
     (beat', scheduledRow)
   where
     beat' = beat + 1 / fromIntegral resolution
     scheduledRow =
-        ScheduledRow
+        Row
             { at = beatToTick config bpm beat
             , rowSourceLine
             , notes = map (compileNote instrumentMap) notes
@@ -122,14 +124,14 @@ schedulePattern
     -> Beat
     -- ^ The beat on which the pattern starts
     -> AST.Pattern NonEmpty
-    -> (Beat, PatternSchedule)
+    -> (Beat, Pattern)
     -- ^ The beat on which the next pattern starts
 schedulePattern playerConfig AST.TrackConfig{bpm} instrumentMap beat AST.Pattern{patternTitle, resolution, rows} =
     second mkPatternSchedule $
         mapAccumL (scheduleRow playerConfig bpm resolution instrumentMap) beat rows
   where
     mkPatternSchedule scheduledRows =
-        PatternSchedule
+        Pattern
             { patternTitle
             , rows = scheduledRows
             }
@@ -138,9 +140,9 @@ schedulePattern playerConfig AST.TrackConfig{bpm} instrumentMap beat AST.Pattern
 scheduleTrack
     :: PlayerConfig
     -> HashMap InstrumentAcr InstrumentTarget
-    -> Track
-    -> Either Text (Zipper PatternSchedule)
-scheduleTrack playerConfig instrumentMap Track{config = trackConfig, sections} = do
+    -> AST.Track
+    -> Either Text Track
+scheduleTrack playerConfig instrumentMap AST.Track{config = trackConfig, sections} = do
     trackPatterns <-
         maybe (Left "Track has no patterns.") Right $
             nonEmpty $

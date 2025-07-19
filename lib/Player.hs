@@ -8,7 +8,6 @@ import Control.Arrow (Arrow (arr), (<<<))
 import Control.Monad.Fix (MonadFix)
 import Data.Fixed (Fixed (MkFixed))
 import Data.List.NonEmpty qualified as NE
-import Data.List.NonEmpty.Zipper (Zipper)
 import Data.List.NonEmpty.Zipper qualified as Z
 import Data.Text qualified as Text
 import Player.Config (PlayerConfig (..))
@@ -26,35 +25,34 @@ import Synch.RefStore (RefStore)
 import TUI (AppEvent (..))
 import Time (prettyElapsedTime, secondsToElapsedTime)
 import Track.AST (SourceLine)
-import Track.Schedule (PatternSchedule (..), ScheduledRow (..), Tick)
-import Track.Schedule qualified as Schedule
+import Track.Schedule (Note (..), Pattern (..), Row (..), Tick, Track)
 
 data PlayerState = PlayerState
     { tick :: Tick
-    , currentPattern :: NonEmpty ScheduledRow
-    , schedule :: Zipper PatternSchedule
+    , currentPattern :: NonEmpty Row
+    , track :: Track
     }
 
-step :: PlayerState -> (Event ScheduledRow, PlayerState)
-step s@PlayerState{tick, currentPattern, schedule}
+step :: PlayerState -> (Event Row, PlayerState)
+step s@PlayerState{tick, currentPattern, track}
     | at > tick = (Nothing, s{tick = tick + 1})
     | otherwise =
         ( Just row
-        , s{tick = tick', currentPattern = currentPattern', schedule = schedule'}
+        , s{tick = tick', currentPattern = currentPattern', track = track'}
         )
   where
-    row@ScheduledRow{at} = NE.head currentPattern
+    row@Row{at} = NE.head currentPattern
 
-    (tick', schedule') = case currentPattern of
-        _ :| [] -> maybe (0, Z.start schedule) (tick + 1,) $ Z.right schedule
-        _ -> (tick + 1, schedule)
+    (tick', track') = case currentPattern of
+        _ :| [] -> maybe (0, Z.start track) (tick + 1,) $ Z.right track
+        _ -> (tick + 1, track)
 
     currentPattern' = case currentPattern of
-        _ :| [] -> rows $ Z.current schedule'
+        _ :| [] -> rows $ Z.current track'
         _ :| r : rs -> r :| rs
 
 playerCore
-    :: (RefStore m, MonadFix m) => PlayerState -> SF m () (Tick, Event ScheduledRow)
+    :: (RefStore m, MonadFix m) => PlayerState -> SF m () (Tick, Event Row)
 playerCore initialState = proc () -> do
     rec let (row, s@PlayerState{tick}) = step s'
         s' <- delay initialState -< s
@@ -63,7 +61,7 @@ playerCore initialState = proc () -> do
 pausablePlayer
     :: (RefStore m, MonadFix m)
     => PlayerState
-    -> SF m Bool (Tick, SourceLine, Event ScheduledRow)
+    -> SF m Bool (Tick, SourceLine, Event Row)
 pausablePlayer initialState = proc running -> do
     coreEv <-
         if running
@@ -88,9 +86,9 @@ reporter PlayerConfig{millisPerTick, sourceFile} ticks sourceLine =
 player
     :: (MonadFix m, RefStore m)
     => PlayerConfig
-    -> Zipper PatternSchedule
-    -> SF m Bool (Event AppEvent, Event [Schedule.Note])
-player config schedule = proc running -> do
+    -> Track
+    -> SF m Bool (Event AppEvent, Event [Note])
+player config track = proc running -> do
     (ticks, sourceLine, evRow) <- pausablePlayer initialState -< running
     slowTick <- everyN 10 -< ()
     justPaused <- positiveEdge -< not running
@@ -101,11 +99,11 @@ player config schedule = proc running -> do
     let updateUI = slowTick <|> justPaused
     appEvent <-
         onEvent (arr $ uncurry $ reporter config) -< fmap (const (ticks, sourceLine)) updateUI
-    arr identity -< (appEvent, Schedule.notes <$> evRow)
+    arr identity -< (appEvent, notes <$> evRow)
   where
     initialState =
         PlayerState
             { tick = 0
-            , currentPattern = rows $ Z.current schedule
-            , schedule
+            , currentPattern = rows $ Z.current track
+            , track
             }
