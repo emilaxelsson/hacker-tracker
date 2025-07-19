@@ -26,6 +26,7 @@ import Track.AST
     , Velocity
     )
 import Track.AST qualified as AST
+import Track.Check (checkPatterns)
 
 -- | Beat count from some reference point in the track (e.g. the start of the track)
 --
@@ -112,11 +113,6 @@ scheduleRow config bpm resolution instrumentMap beat AST.Row{rowSourceLine, note
             , notes = map (compileNote instrumentMap) notes
             }
 
-nonEmptyPattern :: AST.Pattern [] -> Maybe (AST.Pattern NonEmpty)
-nonEmptyPattern pat@AST.Pattern{rows} =
-    nonEmpty rows
-        <&> \rs -> pat{AST.rows = rs}
-
 schedulePattern
     :: PlayerConfig
     -> AST.TrackConfig
@@ -142,13 +138,12 @@ scheduleTrack
     -> HashMap InstrumentAcr InstrumentTarget
     -> AST.Track
     -> Either Text Track
-scheduleTrack playerConfig instrumentMap AST.Track{config = trackConfig, sections} = do
-    trackPatterns <-
-        maybe (Left "Track has no patterns.") Right $
-            nonEmpty $
-                concatMap (mapMaybe nonEmptyPattern . AST.patterns) sections
+scheduleTrack playerConfig instrumentMap track = do
+    trackPatterns <- checkPatterns track
     let (_, patterns) =
-            mapAccumL (schedulePattern playerConfig trackConfig instrumentMap) startBeat $
+            mapAccumL
+                (schedulePattern playerConfig (AST.config track) instrumentMap)
+                startBeat
                 trackPatterns
     return $ fromNonEmpty patterns
   where

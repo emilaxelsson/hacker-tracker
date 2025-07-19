@@ -64,6 +64,7 @@ library
         Synch
         Time
         Track.AST
+        Track.Check
         Track.Parser
         Track.PrettyPrinter
         Track.Schedule
