@@ -3,7 +3,7 @@ module Track.Check
     ) where
 
 import Protolude hiding (note)
-import Track.AST (Pattern (..), Section (..), Track (..), Note)
+import Track.AST (Note, Pattern (..), Section (..), Track (..))
 
 nonEmptyPattern :: Pattern [] note -> Maybe (Pattern NonEmpty note)
 nonEmptyPattern pat@Pattern{rows} =

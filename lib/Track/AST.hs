@@ -61,7 +61,7 @@ data Row note = Row
     { rowSourceLine :: SourceLine
     , notes :: [note]
     }
-    deriving stock (Show)
+    deriving stock (Show, Functor, Foldable, Traversable)
 
 data Pattern f note = Pattern
     { patternSourceLine :: Int

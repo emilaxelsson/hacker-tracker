@@ -25,34 +25,43 @@ import Synch.RefStore (RefStore)
 import TUI (AppEvent (..))
 import Time (prettyElapsedTime, secondsToElapsedTime)
 import Track.AST (SourceLine)
-import Track.Schedule (Note (..), Pattern (..), Row (..), Tick, Track)
+import Track.Schedule
+    ( Note (..)
+    , Pattern (..)
+    , Row (..)
+    , Schedule (..)
+    , Scheduled (..)
+    , ScheduledRow
+    , Tick
+    , Track
+    )
 
 data PlayerState = PlayerState
     { tick :: Tick
-    , currentPattern :: NonEmpty Row
+    , currentPattern :: Schedule (Row Note)
     , track :: Track
     }
 
-step :: PlayerState -> (Event Row, PlayerState)
-step s@PlayerState{tick, currentPattern, track}
+step :: PlayerState -> (Event ScheduledRow, PlayerState)
+step s@PlayerState{tick, currentPattern = Schedule pattern, track}
     | at > tick = (Nothing, s{tick = tick + 1})
     | otherwise =
-        ( Just row
+        ( Just $ Scheduled{at, item = row}
         , s{tick = tick', currentPattern = currentPattern', track = track'}
         )
   where
-    row@Row{at} = NE.head currentPattern
+    Scheduled{at, item = row} = NE.head pattern
 
-    (tick', track') = case currentPattern of
+    (tick', track') = case pattern of
         _ :| [] -> maybe (0, Z.start track) (tick + 1,) $ Z.right track
         _ -> (tick + 1, track)
 
-    currentPattern' = case currentPattern of
+    currentPattern' = case pattern of
         _ :| [] -> rows $ Z.current track'
-        _ :| r : rs -> r :| rs
+        _ :| r : rs -> Schedule (r :| rs)
 
 playerCore
-    :: (RefStore m, MonadFix m) => PlayerState -> SF m () (Tick, Event Row)
+    :: (RefStore m, MonadFix m) => PlayerState -> SF m () (Tick, Event ScheduledRow)
 playerCore initialState = proc () -> do
     rec let (row, s@PlayerState{tick}) = step s'
         s' <- delay initialState -< s
@@ -61,7 +70,7 @@ playerCore initialState = proc () -> do
 pausablePlayer
     :: (RefStore m, MonadFix m)
     => PlayerState
-    -> SF m Bool (Tick, SourceLine, Event Row)
+    -> SF m Bool (Tick, SourceLine, Event ScheduledRow)
 pausablePlayer initialState = proc running -> do
     coreEv <-
         if running
@@ -72,7 +81,7 @@ pausablePlayer initialState = proc running -> do
     let rowEv = snd =<< coreEv
 
     tick <- latch 0 -< tickEv
-    sourceLine <- latch 1 -< (rowSourceLine <$> rowEv)
+    sourceLine <- latch 1 -< (rowSourceLine . item <$> rowEv)
     arr identity -< (tick, sourceLine, rowEv)
 
 reporter :: PlayerConfig -> Tick -> SourceLine -> AppEvent
@@ -99,7 +108,7 @@ player config track = proc running -> do
     let updateUI = slowTick <|> justPaused
     appEvent <-
         onEvent (arr $ uncurry $ reporter config) -< fmap (const (ticks, sourceLine)) updateUI
-    arr identity -< (appEvent, notes <$> evRow)
+    arr identity -< (appEvent, notes . item <$> evRow)
   where
     initialState =
         PlayerState

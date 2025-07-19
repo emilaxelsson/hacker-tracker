@@ -5,6 +5,9 @@ module Track.Schedule
     , Note (..)
     , Row (..)
     , Pattern (..)
+    , Scheduled (..)
+    , Schedule (..)
+    , ScheduledRow
     , Track
     , scheduleTrack
     ) where
@@ -20,9 +23,10 @@ import Track.AST
     , InstrumentAcr
     , InstrumentTarget
     , NoteName (..)
+    , Pattern (..)
     , Pitch (..)
     , Resolution (..)
-    , SourceLine (..)
+    , Row (..)
     , Velocity
     )
 import Track.AST qualified as AST
@@ -51,20 +55,18 @@ data Note = Note
     }
     deriving stock (Eq, Show)
 
-data Row = Row
+data Scheduled a = Scheduled
     { at :: Tick
-    , rowSourceLine :: SourceLine
-    , notes :: [Note]
+    , item :: a
     }
-    deriving stock (Eq, Show)
+    deriving stock (Show, Functor, Foldable, Traversable)
 
-data Pattern = Pattern
-    { patternTitle :: Text
-    , rows :: NonEmpty Row
-    }
-    deriving stock (Eq, Show)
+newtype Schedule a = Schedule {unSchedule :: NonEmpty (Scheduled a)}
+    deriving stock (Show, Functor, Foldable, Traversable)
 
-type Track = Zipper Pattern
+type ScheduledRow = Scheduled (Row Note)
+
+type Track = Zipper (Pattern Schedule Note)
 
 -- | Find the nearest tick for the given beat
 --
@@ -100,17 +102,16 @@ scheduleRow
     -> Beat
     -- ^ The beat on which the row starts
     -> AST.Row AST.Note
-    -> (Beat, Row)
+    -> (Beat, ScheduledRow)
     -- ^ The beat on which the next row starts
-scheduleRow config bpm resolution instrumentMap beat AST.Row{rowSourceLine, notes} =
-    (beat', scheduledRow)
+scheduleRow config bpm resolution instrumentMap beat row@Row{notes} =
+    (beat', Scheduled{at, item = row'})
   where
+    at = beatToTick config bpm beat
     beat' = beat + 1 / fromIntegral resolution
-    scheduledRow =
-        Row
-            { at = beatToTick config bpm beat
-            , rowSourceLine
-            , notes = map (compileNote instrumentMap) notes
+    row' =
+        row
+            { notes = map (compileNote instrumentMap) notes
             }
 
 schedulePattern
@@ -120,17 +121,14 @@ schedulePattern
     -> Beat
     -- ^ The beat on which the pattern starts
     -> AST.Pattern NonEmpty AST.Note
-    -> (Beat, Pattern)
+    -> (Beat, Pattern Schedule Note)
     -- ^ The beat on which the next pattern starts
-schedulePattern playerConfig AST.TrackConfig{bpm} instrumentMap beat AST.Pattern{patternTitle, resolution, rows} =
+schedulePattern playerConfig AST.TrackConfig{bpm} instrumentMap beat pat@AST.Pattern{resolution, rows} =
     second mkPatternSchedule $
         mapAccumL (scheduleRow playerConfig bpm resolution instrumentMap) beat rows
   where
     mkPatternSchedule scheduledRows =
-        Pattern
-            { patternTitle
-            , rows = scheduledRows
-            }
+        pat{rows = Schedule scheduledRows}
 
 -- | The resulting 'Tick' is the length of the track plus one tick
 scheduleTrack
