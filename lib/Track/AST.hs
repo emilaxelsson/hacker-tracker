@@ -2,6 +2,7 @@
 
 module Track.AST where
 
+import CMark qualified as MD
 import Protolude hiding (note)
 
 -- | The position of a line in the source code, starting from 1
@@ -51,7 +52,8 @@ data Pitch = Pitch
     deriving stock (Eq, Show, Generic)
 
 data Note = Note
-    { instrument :: InstrumentAcr
+    { noteSourcePos :: MD.PosInfo
+    , instrument :: InstrumentAcr
     , velocity :: Maybe Velocity
     , pitch :: Maybe Pitch
     }
@@ -61,14 +63,15 @@ data Row note = Row
     { rowSourceLine :: SourceLine
     , notes :: [note]
     }
-    deriving stock (Show)
+    deriving stock (Show, Functor, Foldable, Traversable)
 
 data Pattern f note = Pattern
-    { patternSourceLine :: Int
+    { patternSourceLine :: SourceLine
     , patternTitle :: Text
     , resolution :: Resolution
     , rows :: f (Row note)
     }
+    deriving stock (Functor, Foldable, Traversable)
 
 deriving stock instance Show (f (Row note)) => Show (Pattern f note)
 

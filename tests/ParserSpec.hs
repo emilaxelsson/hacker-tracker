@@ -7,7 +7,7 @@ import Data.Text qualified as Text
 import Protolude
 import Test.Hspec
 import Test.Hspec.QuickCheck (prop)
-import Test.QuickCheck (Arbitrary, Property, arbitrary, (===))
+import Test.QuickCheck (Arbitrary, Property, arbitrary, shrink, (===))
 import Test.QuickCheck qualified as Q
 import Track.AST
 import Track.Parser
@@ -40,13 +40,14 @@ instance Arbitrary Velocity where
     shrink = map Velocity . Q.shrink . unVelocity
 
 instance Arbitrary Note where
-    arbitrary = Note <$> arbitrary <*> arbitrary <*> arbitrary
-    shrink = Q.genericShrink
+    arbitrary = Note nullPos <$> arbitrary <*> arbitrary <*> arbitrary
+    shrink Note{noteSourcePos, instrument, velocity, pitch} =
+        [Note noteSourcePos i v p | (i, v, p) <- shrink (instrument, velocity, pitch)]
 
 prop_parseNote :: Note -> Property
 prop_parseNote n =
     Q.property $
-        let n' = parseNote Nothing nullPos $ prettyNote n
+        let n' = parseNote nullPos $ prettyNote n
          in n' === Right n
 
 spec :: Spec
@@ -55,16 +56,9 @@ spec = do
         prop "roundtrip" prop_parseNote
 
         describe "with configured instruments" $ do
-            let knownInstruments :: [InstrumentAcr]
-                knownInstruments = ["AA", "BB", "CC"]
-
             it "parses known instruments" $ do
-                parseNote (Just knownInstruments) nullPos "BB-50-C"
-                    `shouldBe` Right (Note "BB" (Just 50) (Just $ Pitch C Nothing))
-
-            it "fails on unknown instruments" $ do
-                parseNote (Just knownInstruments) nullPos "XX-50-C"
-                    `shouldSatisfy` isLeft
+                parseNote nullPos "BB-50-C"
+                    `shouldBe` Right (Note nullPos "BB" (Just 50) (Just $ Pitch C Nothing))
 
     describe "parseTrack" $ do
         it "can parse test-track.md" $ do

@@ -15,7 +15,10 @@ common extensions
     default-language: Haskell2010
     default-extensions:
         DeriveAnyClass
+        DeriveFoldable
+        DeriveFunctor
         DeriveGeneric
+        DeriveTraversable
         DerivingStrategies
         DerivingVia
         DuplicateRecordFields
@@ -97,7 +100,6 @@ executable hacker-tracker
                       hacker-tracker,
                       protolude,
                       RtMidi,
-                      text,
                       unordered-containers,
 
 executable align-tracks

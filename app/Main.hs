@@ -6,7 +6,6 @@ import Brick.BChan (newBChan, writeBChan)
 import Control.Monad (fail)
 import Data.HashMap.Strict qualified as HM
 import Data.IORef (newIORef, writeIORef)
-import Data.Text qualified as Text
 import GHC.IO.Handle (hFlush)
 import Midi (playNote)
 import Player (player)
@@ -58,7 +57,7 @@ main = do
         either (fail . show) return $ parseTrack track
     let instrumentMap = HM.fromList instruments
     schedule <-
-        either (fail . Text.unpack) return $ scheduleTrack playerConfig instrumentMap ast
+        either (fail . show) return $ scheduleTrack playerConfig instrumentMap ast
 
     print ast
     print schedule

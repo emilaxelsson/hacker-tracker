@@ -110,7 +110,7 @@ align knownInstruments rows = map Text.unwords $ alignGrid sortedRows
     -- Not passing `knownInstruments` to `parseRow`, because we must be able to handle
     -- unknown instruments as well
     parsedRows =
-        [ either (oops "") notes $ parseRow Nothing (nullPos, row)
+        [ either (oops "") notes $ parseRow (nullPos, row)
         | row <- rows
         ]
 

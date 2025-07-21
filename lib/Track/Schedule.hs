@@ -10,9 +10,7 @@ module Track.Schedule
     ) where
 
 import Data.HashMap.Strict (HashMap)
-import Data.HashMap.Strict qualified as HM
 import Data.List.NonEmpty.Zipper (Zipper, fromNonEmpty)
-import Oops (oops)
 import Player.Config (PlayerConfig (..))
 import Protolude
 import Track.AST
@@ -26,7 +24,8 @@ import Track.AST
     , Velocity
     )
 import Track.AST qualified as AST
-import Track.Check (checkPatterns)
+import Track.Check (CheckedNote (..), checkPatterns)
+import Track.Parser (LocatedError)
 
 -- | Beat count from some reference point in the track (e.g. the start of the track)
 --
@@ -82,12 +81,10 @@ defaultVelocity = 80
 defaultPitch :: Pitch
 defaultPitch = Pitch C Nothing
 
-compileNote :: HashMap InstrumentAcr InstrumentTarget -> AST.Note -> Note
-compileNote instrumentMap AST.Note{instrument, velocity, pitch} =
+interpretNote :: CheckedNote -> Note
+interpretNote CheckedNote{instrument, velocity, pitch} =
     Note
-        { -- The parser has already checked that the track doesn't refer to undefined instruments
-          -- TODO Move this check out of the parser
-          instrument = fromMaybe (oops "should not happen") $ HM.lookup instrument instrumentMap
+        { instrument
         , velocity = fromMaybe defaultVelocity velocity
         , pitch = fromMaybe defaultPitch pitch
         }
@@ -96,13 +93,12 @@ scheduleRow
     :: PlayerConfig
     -> BPM
     -> Resolution
-    -> HashMap InstrumentAcr InstrumentTarget
     -> Beat
     -- ^ The beat on which the row starts
-    -> AST.Row AST.Note
+    -> AST.Row CheckedNote
     -> (Beat, Row)
     -- ^ The beat on which the next row starts
-scheduleRow config bpm resolution instrumentMap beat AST.Row{rowSourceLine, notes} =
+scheduleRow config bpm resolution beat AST.Row{rowSourceLine, notes} =
     (beat', scheduledRow)
   where
     beat' = beat + 1 / fromIntegral resolution
@@ -110,21 +106,20 @@ scheduleRow config bpm resolution instrumentMap beat AST.Row{rowSourceLine, note
         Row
             { at = beatToTick config bpm beat
             , rowSourceLine
-            , notes = map (compileNote instrumentMap) notes
+            , notes = map interpretNote notes
             }
 
 schedulePattern
     :: PlayerConfig
     -> AST.TrackConfig
-    -> HashMap InstrumentAcr InstrumentTarget
     -> Beat
     -- ^ The beat on which the pattern starts
-    -> AST.Pattern NonEmpty AST.Note
+    -> AST.Pattern NonEmpty CheckedNote
     -> (Beat, Pattern)
     -- ^ The beat on which the next pattern starts
-schedulePattern playerConfig AST.TrackConfig{bpm} instrumentMap beat AST.Pattern{patternTitle, resolution, rows} =
+schedulePattern playerConfig AST.TrackConfig{bpm} beat AST.Pattern{patternTitle, resolution, rows} =
     second mkPatternSchedule $
-        mapAccumL (scheduleRow playerConfig bpm resolution instrumentMap) beat rows
+        mapAccumL (scheduleRow playerConfig bpm resolution) beat rows
   where
     mkPatternSchedule scheduledRows =
         Pattern
@@ -137,12 +132,12 @@ scheduleTrack
     :: PlayerConfig
     -> HashMap InstrumentAcr InstrumentTarget
     -> AST.Track
-    -> Either Text Track
+    -> Either LocatedError Track
 scheduleTrack playerConfig instrumentMap track = do
-    trackPatterns <- checkPatterns track
+    trackPatterns <- checkPatterns instrumentMap track
     let (_, patterns) =
             mapAccumL
-                (schedulePattern playerConfig (AST.config track) instrumentMap)
+                (schedulePattern playerConfig (AST.config track))
                 startBeat
                 trackPatterns
     return $ fromNonEmpty patterns
