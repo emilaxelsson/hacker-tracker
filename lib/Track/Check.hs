@@ -55,7 +55,12 @@ checkNote instrumentMap Note{noteSourcePos, instrument = acr, velocity, pitch} =
 checkPatterns
     :: Track
     -> Either LocatedError CheckedPatterns
-checkPatterns Track{config = TrackConfig{instruments}, sections} = do
+checkPatterns Track{config = TrackConfig{bpm, instruments}, sections} = do
+    when (bpm <= 0) $
+        Left $
+            (Nothing,) $
+                "BPM must be a positive integer, got: " <> show bpm
+
     let instrAcrs = map fst instruments
     let dups = List.nub (instrAcrs List.\\ List.nub instrAcrs)
     unless (null dups) $
@@ -69,5 +74,11 @@ checkPatterns Track{config = TrackConfig{instruments}, sections} = do
         maybe (Left (Nothing, "Track has no patterns.")) Right $
             nonEmpty $
                 concatMap (mapMaybe nonEmptyPattern . patterns) sections
+
+    for_ nePatterns $ \Pattern{patternSourcePos, resolution} ->
+        when (resolution <= 0) $
+            Left $
+                (Just patternSourcePos,) $
+                    "Resolution must be a positive integer, got: " <> show resolution
 
     mapM (mapM (checkNote instrumentMap)) nePatterns

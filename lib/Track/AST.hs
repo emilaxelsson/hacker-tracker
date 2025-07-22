@@ -66,7 +66,7 @@ data Row note = Row
     deriving stock (Show, Functor, Foldable, Traversable)
 
 data Pattern f note = Pattern
-    { patternSourceLine :: SourceLine
+    { patternSourcePos :: MD.PosInfo
     , patternTitle :: Text
     , resolution :: Resolution
     , rows :: f (Row note)

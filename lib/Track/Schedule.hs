@@ -10,6 +10,7 @@ module Track.Schedule
     ) where
 
 import Data.List.NonEmpty.Zipper (Zipper, fromNonEmpty)
+import Oops (oops)
 import Player.Config (PlayerConfig (..))
 import Protolude
 import Track.AST
@@ -19,7 +20,7 @@ import Track.AST
     , Pitch (..)
     , Resolution (..)
     , SourceLine (..)
-    , TrackConfig
+    , TrackConfig (..)
     , Velocity
     )
 import Track.AST qualified as AST
@@ -127,13 +128,17 @@ schedulePattern playerConfig AST.TrackConfig{bpm} beat AST.Pattern{patternTitle,
 
 -- | The resulting 'Tick' is the length of the track plus one tick
 scheduleTrack :: PlayerConfig -> TrackConfig -> CheckedPatterns -> Track
-scheduleTrack playerConfig trackConfig patterns =
-    fromNonEmpty $
-        snd $
-            mapAccumL
-                (schedulePattern playerConfig trackConfig)
-                startBeat
-                patterns
+scheduleTrack playerConfig@PlayerConfig{millisPerTick} trackConfig patterns
+    | millisPerTick <= 0 =
+        oops $
+            "millisPerTick must be a positive integer, got: " <> show millisPerTick
+    | otherwise =
+        fromNonEmpty $
+            snd $
+                mapAccumL
+                    (schedulePattern playerConfig trackConfig)
+                    startBeat
+                    patterns
   where
     startBeat :: Beat
     startBeat = 0

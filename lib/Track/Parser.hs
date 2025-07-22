@@ -208,7 +208,7 @@ getSectionPatterns
     :: [((MD.PosInfo, Text), [MD.Node])]
     -> Either LocatedError [Pattern [] Note]
 getSectionPatterns [] = return []
-getSectionPatterns (((pos@MD.PosInfo{startLine}, patternTitle), nodes) : ss) = do
+getSectionPatterns (((pos, patternTitle), nodes) : ss) = do
     (config, patternNode) <- case nodes of
         [c, p] -> return (c, p)
         _ ->
@@ -231,7 +231,7 @@ getSectionPatterns (((pos@MD.PosInfo{startLine}, patternTitle), nodes) : ss) = d
 
     let pattern =
             Pattern
-                { patternSourceLine = SourceLine startLine
+                { patternSourcePos = pos
                 , patternTitle
                 , resolution
                 , rows

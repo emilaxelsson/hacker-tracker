@@ -1,16 +1,11 @@
 module CheckSpec (spec) where
 
 import CMark (PosInfo (..))
-import Data.Text qualified as Text
 import Protolude
 import Test.Hspec
-import Test.Hspec.QuickCheck (prop)
-import Test.QuickCheck (Arbitrary, Property, arbitrary, shrink, (===))
-import Test.QuickCheck qualified as Q
 import Track.AST
 import Track.Check (checkPatterns)
 import Track.Parser
-import Track.PrettyPrinter
 
 nullPos :: PosInfo
 nullPos = PosInfo 0 0 0 0
@@ -25,67 +20,104 @@ spec = do
             checkPatterns ast
                 `shouldSatisfy` isRight
 
+        let emptyConfig = TrackConfig 10 []
+
         it "fails a track without sections" $ do
             let ast =
                     Track
-                        { config = TrackConfig 0 []
+                        { config = emptyConfig
                         , sections = []
                         }
 
-            checkPatterns ast
-                `shouldSatisfy` isLeft
+            let result = checkPatterns ast
+
+            result `shouldSatisfy` isLeft
+            show result `shouldContain` "no patterns"
 
         it "fails a track without patterns" $ do
             let ast =
                     Track
-                        { config = TrackConfig 0 []
+                        { config = emptyConfig
                         , sections =
                             [ Section "" []
                             , Section "" []
                             ]
                         }
 
-            checkPatterns ast
-                `shouldSatisfy` isLeft
+            let result = checkPatterns ast
+
+            result `shouldSatisfy` isLeft
+            show result `shouldContain` "no patterns"
 
         it "fails a track that only has empty patterns" $ do
             let ast =
                     Track
-                        { config = TrackConfig 0 []
+                        { config = emptyConfig
                         , sections =
                             [ Section
                                 ""
-                                [ Pattern 0 "" 0 []
-                                , Pattern 0 "" 0 []
+                                [ Pattern nullPos "" 0 []
+                                , Pattern nullPos "" 0 []
                                 ]
                             ]
                         }
 
-            checkPatterns ast
-                `shouldSatisfy` isLeft
+            let result = checkPatterns ast
+
+            result `shouldSatisfy` isLeft
+            show result `shouldContain` "no patterns"
 
         it "fails a track that refers to an undefined instrument" $ do
             let ast =
                     Track
-                        { config = TrackConfig 0 [("PI", 0), ("BA", 1)]
+                        { config = TrackConfig 10 [("PI", 0), ("BA", 1)]
                         , sections =
                             [ Section
                                 ""
                                 [ Pattern
-                                    { patternSourceLine = 0
-                                    , patternTitle = ""
-                                    , resolution = 0
-                                    , rows =
-                                        [ Row 0
-                                            [ Note nullPos "PI" Nothing Nothing
-                                            , Note nullPos "ZZ" Nothing Nothing
-                                            , Note nullPos "BA" Nothing Nothing
-                                            ]
+                                    nullPos
+                                    ""
+                                    10
+                                    [ Row
+                                        0
+                                        [ Note nullPos "PI" Nothing Nothing
+                                        , Note nullPos "ZZ" Nothing Nothing
+                                        , Note nullPos "BA" Nothing Nothing
                                         ]
-                                    }
+                                    ]
                                 ]
                             ]
                         }
 
-            checkPatterns ast
-                `shouldSatisfy` isLeft
+            let result = checkPatterns ast
+
+            result `shouldSatisfy` isLeft
+            show result `shouldContain` "ZZ"
+
+        it "fails a track that has a non-positive BPM value" $ do
+            let ast =
+                    Track
+                        { config = TrackConfig (-2) []
+                        , sections =
+                            [ Section "" [Pattern nullPos "" 10 [Row 0 []]]
+                            ]
+                        }
+
+            let result = checkPatterns ast
+
+            result `shouldSatisfy` isLeft
+            show result `shouldContain` "BPM"
+
+        it "fails a track that has patterns with a non-positive resolution value" $ do
+            let ast =
+                    Track
+                        { config = emptyConfig
+                        , sections =
+                            [ Section "" [Pattern nullPos "" (-2) [Row 0 []]]
+                            ]
+                        }
+
+            let result = checkPatterns ast
+
+            result `shouldSatisfy` isLeft
+            show result `shouldContain` "Resolution"
