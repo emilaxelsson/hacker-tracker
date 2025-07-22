@@ -8,7 +8,6 @@ module Track.Parser
 
 import CMark qualified as MD
 import Data.Char (isNumber)
-import Data.List qualified as List
 import Data.Text qualified as Text
 import Oops
 import Protolude hiding (note)
@@ -93,12 +92,6 @@ getTrackConfig [config] = do
             _ : _ : _ -> Left "Multiple BPM configs."
             [b] -> return b
 
-    let instrAcrs = [acr | TrackConfigInstr acr _ <- cs]
-    let dups = List.nub (instrAcrs List.\\ List.nub instrAcrs)
-    unless (null dups) $
-        Left $
-            locatedError config $
-                "Multiple definitions of instruments: " <> show dups
     let instruments = [(a, t) | TrackConfigInstr a t <- cs]
 
     return $ TrackConfig{bpm, instruments}

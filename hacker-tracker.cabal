@@ -100,7 +100,6 @@ executable hacker-tracker
                       hacker-tracker,
                       protolude,
                       RtMidi,
-                      unordered-containers,
 
 executable align-tracks
     import:           warnings

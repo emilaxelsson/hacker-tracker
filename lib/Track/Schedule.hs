@@ -9,23 +9,21 @@ module Track.Schedule
     , scheduleTrack
     ) where
 
-import Data.HashMap.Strict (HashMap)
 import Data.List.NonEmpty.Zipper (Zipper, fromNonEmpty)
 import Player.Config (PlayerConfig (..))
 import Protolude
 import Track.AST
     ( BPM (..)
-    , InstrumentAcr
     , InstrumentTarget
     , NoteName (..)
     , Pitch (..)
     , Resolution (..)
     , SourceLine (..)
+    , TrackConfig
     , Velocity
     )
 import Track.AST qualified as AST
-import Track.Check (CheckedNote (..), checkPatterns)
-import Track.Parser (LocatedError)
+import Track.Check (CheckedNote (..), CheckedPatterns)
 
 -- | Beat count from some reference point in the track (e.g. the start of the track)
 --
@@ -128,19 +126,14 @@ schedulePattern playerConfig AST.TrackConfig{bpm} beat AST.Pattern{patternTitle,
             }
 
 -- | The resulting 'Tick' is the length of the track plus one tick
-scheduleTrack
-    :: PlayerConfig
-    -> HashMap InstrumentAcr InstrumentTarget
-    -> AST.Track
-    -> Either LocatedError Track
-scheduleTrack playerConfig instrumentMap track = do
-    trackPatterns <- checkPatterns instrumentMap track
-    let (_, patterns) =
+scheduleTrack :: PlayerConfig -> TrackConfig -> CheckedPatterns -> Track
+scheduleTrack playerConfig trackConfig patterns =
+    fromNonEmpty $
+        snd $
             mapAccumL
-                (schedulePattern playerConfig (AST.config track))
+                (schedulePattern playerConfig trackConfig)
                 startBeat
-                trackPatterns
-    return $ fromNonEmpty patterns
+                patterns
   where
     startBeat :: Beat
     startBeat = 0

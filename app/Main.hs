@@ -4,7 +4,6 @@ module Main (main) where
 
 import Brick.BChan (newBChan, writeBChan)
 import Control.Monad (fail)
-import Data.HashMap.Strict qualified as HM
 import Data.IORef (newIORef, writeIORef)
 import GHC.IO.Handle (hFlush)
 import Midi (playNote)
@@ -21,7 +20,8 @@ import Sound.RtMidi
 import Synch (action, onEvent, refInput, runSF)
 import Synch.System (execSystemForever)
 import TUI (PlayerCommand (..), trackerMain)
-import Track.AST (Track (..), TrackConfig (..))
+import Track.AST (Track (..))
+import Track.Check (checkPatterns)
 import Track.Parser (parseTrack)
 import Track.Schedule (PlayerConfig (..), scheduleTrack)
 
@@ -52,15 +52,13 @@ main = do
                 , sourceFile = path
                 }
 
-    track <- readFile path
-    ast@Track{config = TrackConfig{instruments}} <-
-        either (fail . show) return $ parseTrack track
-    let instrumentMap = HM.fromList instruments
-    schedule <-
-        either (fail . show) return $ scheduleTrack playerConfig instrumentMap ast
+    file <- readFile path
+    ast <- either (fail . show) return $ parseTrack file
+    checkedPatterns <- either (fail . show) return $ checkPatterns ast
+    let scheduledTrack = scheduleTrack playerConfig (config ast) checkedPatterns
 
     print ast
-    print schedule
+    print scheduledTrack
 
     eventChan <- newBChan 1
     runningRef <- newIORef False
@@ -72,7 +70,7 @@ main = do
             execSystemForever (millisPerTick playerConfig) $
                 runSF $ proc () -> do
                     input <- refInput runningRef -< ()
-                    (appEvent, playEvent) <- player playerConfig schedule -< input
+                    (appEvent, playEvent) <- player playerConfig scheduledTrack -< input
                     onEvent (action $ writeBChan eventChan) -< appEvent
                     void $ onEvent (action playNotes) -< playEvent
         )
