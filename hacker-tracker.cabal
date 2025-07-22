@@ -123,7 +123,8 @@ test-suite tests
     hs-source-dirs:   tests
     main-is:          Spec.hs
 
-    other-modules:    ParserSpec
+    other-modules:    CheckSpec
+                      ParserSpec
                       SynchSpec
 
     build-depends:    cmark,
