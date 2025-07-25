@@ -128,7 +128,8 @@ test-suite tests
                       ScheduleSpec
                       SynchSpec
 
-    build-depends:    cmark,
+    build-depends:    base,
+                      cmark,
                       hacker-tracker,
                       hspec,
                       protolude,

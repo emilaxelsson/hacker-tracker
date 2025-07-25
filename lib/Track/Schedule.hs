@@ -9,6 +9,7 @@ module Track.Schedule
     , scheduleTrack
     ) where
 
+import Data.List.NonEmpty qualified as NE
 import Data.List.NonEmpty.Zipper (Zipper, fromNonEmpty)
 import Oops (oops)
 import Player.Config (PlayerConfig (..))
@@ -117,8 +118,21 @@ schedulePattern
     -> (Beat, Pattern)
     -- ^ The beat on which the next pattern starts
 schedulePattern playerConfig AST.TrackConfig{bpm} beat AST.Pattern{patternTitle, resolution, rows} =
-    second mkPatternSchedule $
-        mapAccumL (scheduleRow playerConfig bpm resolution) beat rows
+    let (beat', pattern@Pattern{rows = rows'}) =
+            second mkPatternSchedule $
+                mapAccumL (scheduleRow playerConfig bpm resolution) beat rows
+
+        lastRow = NE.last rows'
+
+        -- Extra row scheduled at the last tick of the pattern, to ensure that the pattern
+        -- lasts for its whole duration
+        durationRow =
+            Row
+                { at = beatToTick playerConfig bpm beat' - 1
+                , rowSourceLine = rowSourceLine lastRow
+                , notes = []
+                }
+     in (beat', pattern{rows = rows' <> pure durationRow})
   where
     mkPatternSchedule scheduledRows =
         Pattern
