@@ -57,6 +57,10 @@ data Row = Row
     }
     deriving stock (Eq, Show)
 
+instance Semigroup Row where
+    Row _ _ notes1 <> Row at2 line2 notes2 =
+        Row at2 line2 (notes1 <> notes2)
+
 data Pattern = Pattern
     { patternTitle :: Text
     , rows :: NonEmpty Row

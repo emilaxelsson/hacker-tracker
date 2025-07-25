@@ -48,7 +48,7 @@ main = do
     let playerConfig :: PlayerConfig
         playerConfig =
             PlayerConfig
-                { millisPerTick = 15
+                { millisPerTick = 10
                 , sourceFile = path
                 }
 

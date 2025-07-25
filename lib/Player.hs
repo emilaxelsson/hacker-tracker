@@ -34,22 +34,30 @@ data PlayerState = PlayerState
     }
 
 step :: PlayerState -> (Event Row, PlayerState)
-step s@PlayerState{tick, currentPattern, track}
-    | at > tick = (Nothing, s{tick = tick + 1})
-    | otherwise =
-        ( Just row
-        , s{tick = tick', currentPattern = currentPattern', track = track'}
-        )
+step PlayerState{tick, currentPattern, track} =
+    -- \| at > tick = (Nothing, s{tick = tick + 1})
+    -- \| otherwise =
+    ( evCombinedRow
+    , PlayerState{tick = tick', currentPattern = currentPattern', track = track'}
+    )
   where
-    row@Row{at} = NE.head currentPattern
+    rowsToPlay = NE.takeWhile ((tick >=) . at) currentPattern
+    evCombinedRow = sconcat <$> nonEmpty rowsToPlay
+    remainingRows = NE.dropWhile ((tick >=) . at) currentPattern
 
-    (tick', track') = case currentPattern of
-        _ :| [] -> maybe (0, Z.start track) (tick + 1,) $ Z.right track
+    (tick', track') = case remainingRows of
+        [] -> maybe (0, Z.start track) (tick + 1,) $ Z.right track
         _ -> (tick + 1, track)
 
-    currentPattern' = case currentPattern of
-        _ :| [] -> rows $ Z.current track'
-        _ :| r : rs -> r :| rs
+    currentPattern' = fromMaybe (rows $ Z.current track') $ nonEmpty remainingRows
+
+-- (tick', track') = case currentPattern of
+--     _ :| [] -> maybe (0, Z.start track) (tick + 1,) $ Z.right track
+--     _ -> (tick + 1, track)
+
+-- currentPattern' = case currentPattern of
+--     _ :| [] -> rows $ Z.current track'
+--     _ :| r : rs -> r :| rs
 
 playerCore
     :: (RefStore m, MonadFix m) => PlayerState -> SF m () (Tick, Event Row)
